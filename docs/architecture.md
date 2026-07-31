@@ -18,14 +18,14 @@ Construir uma POC de plataforma de observabilidade que monitora pipelines de dad
 
 ```
 [Geração diária]                [Landing Zone]              [Ingestão]         [Transformação]
-Databricks Workflow      ──>    pulse.landing (Volumes)  ──> Autoloader   ──>  Bronze ──> Silver ──> Gold
+Databricks Workflow      ──>    poc_pulse_observability.landing (Volumes)  ──> Autoloader   ──>  Bronze ──> Silver ──> Gold
 (trigger diário)                <sistema>/data=AAAA-MM-DD/    (cloudFiles,      (Delta,     (MERGE      (KPIs de
 dbldatagen + Faker              arquivos JSON brutos          Trigger           cópia       por         negócio)
 (um gerador por sistema)                                      AvailableNow)     fiel)       chave)
                                                                                                   │
                                                                                                   ▼
                                                                                      [Observabilidade — o produto]
-                                                                                     pulse.observability
+                                                                                     poc_pulse_observability.observability
                                                                                      (logs de execução, qualidade,
                                                                                       SLA, reconciliação de negócio)
                                                                                                   │
@@ -36,24 +36,24 @@ dbldatagen + Faker              arquivos JSON brutos          Trigger           
 
 ### Unity Catalog — convenção de nomes
 
-Catalog único `pulse`, schema por camada:
+Catalog único `poc_pulse_observability` (nome ajustado para manter o prefixo `poc_` usado em todo o repositório, sinalizando ambiente não-produtivo já dentro do próprio Databricks), schema por camada:
 
 | Schema | Conteúdo |
 |---|---|
-| `pulse.landing` | Volumes — arquivos JSON brutos, organizados por `sistema/data=AAAA-MM-DD/` |
-| `pulse.bronze` | Tabelas Delta, cópia fiel por sistema (`erp`, `crm`, `tms`, `financeiro`) |
-| `pulse.silver` | Tabelas Delta limpas, tipadas, deduplicadas, com regras de negócio aplicadas |
-| `pulse.gold` | Tabelas Delta com KPIs de negócio (OTIF, taxa de rejeição de lote, DSO etc.) |
-| `pulse.observability` | Tabelas Delta com logs de execução, métricas de qualidade, SLA e reconciliação — alimentadas pelos três eixos de observabilidade |
+| `poc_pulse_observability.landing` | Volumes — arquivos JSON brutos, organizados por `sistema/data=AAAA-MM-DD/` |
+| `poc_pulse_observability.bronze` | Tabelas Delta, cópia fiel por sistema (`erp`, `crm`, `tms`, `financeiro`) |
+| `poc_pulse_observability.silver` | Tabelas Delta limpas, tipadas, deduplicadas, com regras de negócio aplicadas |
+| `poc_pulse_observability.gold` | Tabelas Delta com KPIs de negócio (OTIF, taxa de rejeição de lote, DSO etc.) |
+| `poc_pulse_observability.observability` | Tabelas Delta com logs de execução, métricas de qualidade, SLA e reconciliação — alimentadas pelos três eixos de observabilidade |
 
 ### Os 4 pipelines (Fase 1)
 
 | Pipeline | Fonte | Camada Bronze |
 |---|---|---|
-| ERP (Manufacturing + Distribution) | dbldatagen — módulos Produção e Estoque na mesma fonte | `pulse.bronze.erp_producao`, `pulse.bronze.erp_estoque` |
-| CRM (Commercial) | dbldatagen + Faker (nomes, endereços, emails) | `pulse.bronze.crm_pedidos`, `pulse.bronze.crm_atendimento` |
-| TMS (Logistics) | dbldatagen — inclui leitura de temperatura por remessa | `pulse.bronze.tms_remessas`, `pulse.bronze.tms_temperatura` |
-| Financeiro (SSC) | dbldatagen — depende de eventos de entrega e pedido | `pulse.bronze.financeiro_faturas` |
+| ERP (Manufacturing + Distribution) | dbldatagen — módulos Produção e Estoque na mesma fonte | `poc_pulse_observability.bronze.erp_producao`, `poc_pulse_observability.bronze.erp_estoque` |
+| CRM (Commercial) | dbldatagen + Faker (nomes, endereços, emails) | `poc_pulse_observability.bronze.crm_pedidos`, `poc_pulse_observability.bronze.crm_atendimento` |
+| TMS (Logistics) | dbldatagen — inclui leitura de temperatura por remessa | `poc_pulse_observability.bronze.tms_remessas`, `poc_pulse_observability.bronze.tms_temperatura` |
+| Financeiro (SSC) | dbldatagen — depende de eventos de entrega e pedido | `poc_pulse_observability.bronze.financeiro_faturas` |
 
 ## 4. Componentes e justificativa
 
@@ -93,11 +93,18 @@ Adicionar o 5º pipeline (separar Distribution do ERP) é o teste de que o desen
 
 ## 8. Próximos passos
 
-ADRs a escrever antes da implementação:
+**ADRs escritos:**
+- `adr-005-governanca-acesso.md` — RBAC pretendido, Tags real, ABAC descartado (com evidências testadas)
+- `adr-006-orquestracao-dependencias.md` — Job diário com Tasks dependentes + Job mensal consultando observabilidade
+- `adr-007-alertas.md` — Job Notifications nativo + Notificador customizado em PySpark (evidência de spike SMTP)
+- `adr-008-widgets-reprocessamento.md` — parametrização e gatilho de backfill
+
+**ADRs ainda pendentes**, antes da implementação de código:
 - `adr-001-landing-zone.md`
 - `adr-002-streaming-vs-batch.md`
 - `adr-003-programacao-orientada-a-objetos.md`
-- `adr-004-widgets-parametrizacao.md`
-- `adr-005-infrastructure-as-code.md`
+- `adr-004-infrastructure-as-code.md`
 
-Depois dos ADRs: schema detalhado por sistema (Passo 4) e estrutura de `src/` (Passo 5).
+**Infraestrutura já criada:** catalog `poc_pulse_observability` e os 5 schemas (`landing`, `bronze`, `silver`, `gold`, `observability`) — confirmados via Catalog Explorer.
+
+Depois dos ADRs pendentes: schema detalhado por sistema (Passo 4) e estrutura de `src/` (Passo 5).
