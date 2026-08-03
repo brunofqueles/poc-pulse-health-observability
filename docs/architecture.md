@@ -94,17 +94,15 @@ Adicionar o 5º pipeline (separar Distribution do ERP) é o teste de que o desen
 ## 8. Próximos passos
 
 **ADRs escritos:**
+- `adr-001-landing-zone.md` — geração via dbldatagen+Faker, Landing Zone isolada por sistema
+- `adr-002-streaming-vs-batch.md` — streaming só em Landing→Bronze, batch+MERGE nas demais camadas
+- `adr-003-programacao-orientada-a-objetos.md` — OOP em simuladores, verificador de qualidade e notificadores
+- `adr-004-infrastructure-as-code.md` — Databricks Asset Bundles para os Jobs diário e mensal
 - `adr-005-governanca-acesso.md` — RBAC pretendido, Tags real, ABAC descartado (com evidências testadas)
 - `adr-006-orquestracao-dependencias.md` — Job diário com Tasks dependentes + Job mensal consultando observabilidade
 - `adr-007-alertas.md` — Job Notifications nativo + Notificador customizado em PySpark (evidência de spike SMTP)
 - `adr-008-widgets-reprocessamento.md` — parametrização e gatilho de backfill
 
-**ADRs ainda pendentes**, antes da implementação de código:
-- `adr-001-landing-zone.md`
-- `adr-002-streaming-vs-batch.md`
-- `adr-003-programacao-orientada-a-objetos.md`
-- `adr-004-infrastructure-as-code.md`
+**Infraestrutura já criada:** catalog `poc_pulse_observability` e os 5 schemas (`landing`, `bronze`, `silver`, `gold`, `observability`) — confirmados via Catalog Explorer, com tags aplicadas e herança validada.
 
-**Infraestrutura já criada:** catalog `poc_pulse_observability` e os 5 schemas (`landing`, `bronze`, `silver`, `gold`, `observability`) — confirmados via Catalog Explorer.
-
-Depois dos ADRs pendentes: schema detalhado por sistema (Passo 4) e estrutura de `src/` (Passo 5).
+**Próximo passo real:** schema detalhado por sistema (campos, tipos, chaves de negócio) e estrutura de `src/` (simuladores, qualidade, notificadores, transformação).
