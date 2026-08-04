@@ -26,6 +26,8 @@ Medallion (`landing` → `bronze` → `silver` → `gold` → `observability`) s
 
 Arquitetura completa, limitações da Free Edition e como foram absorvidas no desenho: [`docs/architecture.md`](docs/architecture.md).
 
+Schema detalhado por sistema (campos, tipos, chaves de negócio, sujeira intencional de origem): [`docs/schemas/`](docs/schemas/).
+
 ## Decisões técnicas (ADRs)
 
 Cada decisão de arquitetura relevante está documentada com contexto, alternativas consideradas e consequências:
@@ -40,6 +42,7 @@ Cada decisão de arquitetura relevante está documentada com contexto, alternati
 | [006](docs/adr/adr-006-orquestracao-dependencias.md) | Orquestração e dependências entre pipelines |
 | [007](docs/adr/adr-007-alertas.md) | Alertas (detecção → notificação) |
 | [008](docs/adr/adr-008-widgets-reprocessamento.md) | Widgets e reprocessamento/backfill |
+| [009](docs/adr/adr-009-retencao-landing-zone.md) | Retenção da Landing Zone |
 
 ## FinOps
 
