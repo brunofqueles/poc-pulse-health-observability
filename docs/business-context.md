@@ -29,6 +29,16 @@ Pulse Commercial      Pulse Pharma Mfg     Pulse Distribution   Pulse Logistics 
 | Processos-chave | Recebimento de matéria-prima → Ordem de Produção → Produção → Controle de Qualidade → Liberação (ou Rejeição) de Lote |
 | Entidades de negócio | Produto (SKU), Matéria-Prima, Lote de Produção, Ordem de Produção, Resultado de QC, Centro de Produção |
 | Regras de negócio críticas | 1. Um lote só é liberado se passar no controle de qualidade — reprovação bloqueia distribuição.<br>2. Matéria-prima com validade vencida não pode entrar em ordem de produção.<br>3. Todo lote carrega validade própria (shelf life) que precisa ser propagada adiante.<br>4. `lote_id` é a chave que precisa sobreviver a todas as camadas seguintes — viabiliza recall |
+
+**Catálogo de produtos (fixo, 3 SKUs):**
+
+| Produto | Forma farmacêutica | Exige cadeia fria | Validade padrão |
+|---|---|---|---|
+| Vitalectra 500mg | Comprimido | Não | 730 dias |
+| Imunorax | Injetável | **Sim** | 365 dias |
+| Pulmoxil | Xarope | Não | 180 dias |
+
+Catálogo reduzido a 3 produtos deliberadamente, cada um cobrindo uma forma farmacêutica distinta, para manter os cenários de teste concretos e verificáveis (ex.: Imunorax é o único produto que deveria acionar a regra de cadeia fria na Logistics).
 | KPIs de negócio | Taxa de rejeição de lote (reprovados / total); tempo médio de ciclo (ordem aberta → lote liberado); aderência ao plano de produção (produzido vs. planejado) |
 | Volumetria assumida (premissa) | ~80–150 ordens de produção/dia; ~40–80 lotes fechados/dia |
 | Consumidor do dado | Qualidade/Compliance (rastreabilidade e recall); Pulse Distribution (o que está liberado pra despacho); plataforma de observabilidade (SLA de liberação de lote) |
@@ -56,7 +66,7 @@ Pulse Commercial      Pulse Pharma Mfg     Pulse Distribution   Pulse Logistics 
 | Missão/responsabilidade | Transporte, roteirização, rastreamento, cadeia fria (temperatura), entregas |
 | Processos-chave | Recebimento da Nota de Expedição (Distribution) → Roteirização (rota/veículo) → Transporte com monitoramento de temperatura → Entrega no destino → Comprovante de Entrega (POD) |
 | Entidades de negócio | Rota, Veículo, Remessa (vincula nota de expedição a uma rota), Leitura de Temperatura (evento por remessa), Comprovante de Entrega |
-| Regras de negócio críticas | 1. Remessa de produto com exigência de cadeia fria precisa manter temperatura dentro da faixa (ex.: 2–8°C) durante todo o transporte — violação é evento crítico.<br>2. `pedido_id` e `lote_id` propagados da Remessa até o Comprovante de Entrega — fecha a rastreabilidade ponta a ponta.<br>3. SLA de entrega definido por janela contratada — violação vira evento de SLA.<br>4. Entrega sem comprovante (POD ausente) é estado inválido |
+| Regras de negócio críticas | 1. Remessa de produto com exigência de cadeia fria precisa manter temperatura dentro da faixa (ex.: 2–8°C) durante todo o transporte — violação é evento crítico.<br>2. `pedido_id` e `lote_id` propagados da Remessa até o Comprovante de Entrega — fecha a rastreabilidade ponta a ponta.<br>3. SLA de entrega definido por janela contratada — violação vira evento de SLA.<br>4. Entrega sem comprovante (POD ausente) é estado inválido.<br>5. **Veículo alocado a uma remessa de produto que exige cadeia fria precisa ser um veículo refrigerado** — violação é detectável apenas cruzando Logistics (veículo) com Manufacturing (produto/lote), não é verificação de uma tabela isolada |
 | KPIs de negócio | OTIF (On Time In Full); % de remessas com violação de cadeia fria; tempo médio de trânsito por rota |
 | Volumetria assumida (premissa) | ~150–300 remessas/dia; leitura de temperatura simulada em intervalos (ex.: a cada 30min de trânsito) |
 | Consumidor do dado | Commercial (status de entrega); Compliance/Qualidade (violação de cadeia fria pode implicar recall); plataforma de observabilidade (SLA de OTIF, anomalia de temperatura) |
@@ -98,11 +108,26 @@ Pulse Commercial      Pulse Pharma Mfg     Pulse Distribution   Pulse Logistics 
 | `lote_id` | Manufacturing | Distribution, Logistics | Rastreabilidade e recall |
 | `pedido_id` | Commercial | Distribution, Logistics, Financeiro | Acompanhamento do pedido e faturamento |
 
+## Calendário de operação por sistema
+
+Premissa de negócio, não decisão técnica — reflete que a Manufacturing é indústria (não opera fim de semana) e que o Commercial recebe pedido por canal online mesmo fora do expediente.
+
+| Sistema | Calendário |
+|---|---|
+| ERP — Manufacturing | Segunda a sexta |
+| ERP — Distribution | Segunda a sábado |
+| CRM — Commercial | Todos os dias |
+| TMS — Logistics | Segunda a sábado |
+| Financeiro — SSC | Segunda a sexta |
+
+Ausência de execução em dia não operacional não é falha — é estado esperado, e a plataforma de observabilidade precisa distinguir os dois casos.
+
 ## Pontos transversais de observabilidade
 
 - **Reconciliação de negócio:** valor do pedido (Commercial) vs. valor faturado (Financeiro).
 - **Dependência de orquestração:** Financeiro não fecha o mês sem os outros quatro pipelines terem processado o período.
-- **Anomalia de qualidade:** violação de faixa de temperatura em remessas de cadeia fria (Logistics).
+- **Anomalia de qualidade (dentro de um sistema):** violação de faixa de temperatura em remessas de cadeia fria (Logistics) — pode ocorrer por falha de equipamento mesmo em veículo refrigerado.
+- **Anomalia de qualidade (cruzando sistemas):** veículo não refrigerado alocado a remessa de produto que exige cadeia fria — só detectável cruzando Logistics × Manufacturing (ver detalhamento técnico em `docs/schemas/tms.md`).
 - **Estados inválidos a detectar:** estoque negativo (Distribution), entrega sem POD (Logistics), lançamento sem centro de custo (Financeiro).
 
 ## Os três eixos de observabilidade aplicados ao domínio

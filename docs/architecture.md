@@ -41,10 +41,12 @@ Catalog único `poc_pulse_observability` (nome ajustado para manter o prefixo `p
 | Schema | Conteúdo |
 |---|---|
 | `poc_pulse_observability.landing` | Volumes — arquivos JSON brutos, organizados por `sistema/data=AAAA-MM-DD/` |
-| `poc_pulse_observability.bronze` | Tabelas Delta, cópia fiel por sistema (`erp`, `crm`, `tms`, `financeiro`) |
+| `poc_pulse_observability.bronze` | Tabelas Delta, cópia fiel por sistema (`erp`, `crm`, `tms`, `financeiro`) — **todas as colunas como `string`, sem nenhum tratamento de tipo ou conteúdo**. Sujeira de origem (formato de data inconsistente, número com vírgula decimal, acentuação, nulo representado de formas diferentes) é preservada de propósito; tratamento só começa na Silver. Detalhamento de campo por sistema em `docs/schemas/` |
 | `poc_pulse_observability.silver` | Tabelas Delta limpas, tipadas, deduplicadas, com regras de negócio aplicadas |
 | `poc_pulse_observability.gold` | Tabelas Delta com KPIs de negócio (OTIF, taxa de rejeição de lote, DSO etc.) |
 | `poc_pulse_observability.observability` | Tabelas Delta com logs de execução, métricas de qualidade, SLA e reconciliação — alimentadas pelos três eixos de observabilidade |
+
+**Nota sobre `pipeline_runs`:** o status de cada execução não é binário (sucesso/falha) — existe um terceiro estado, **"dia não operacional"**, para quando o simulador de um sistema não gera arquivo por não ser dia de operação (ver calendário por sistema em `business-context.md`). Esse terceiro estado não deve disparar alerta de falha (ADR-007) nem impedir o Job mensal de considerar o mês completo (ADR-006).
 
 ### Os 4 pipelines (Fase 1)
 
