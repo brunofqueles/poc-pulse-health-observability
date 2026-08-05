@@ -44,6 +44,10 @@ Cada decisão de arquitetura relevante está documentada com contexto, alternati
 | [008](docs/adr/adr-008-widgets-reprocessamento.md) | Widgets e reprocessamento/backfill |
 | [009](docs/adr/adr-009-retencao-landing-zone.md) | Retenção da Landing Zone |
 
+## Lições aprendidas
+
+Problemas reais encontrados durante a construção (diagnóstico, causa raiz e correção) — diferente de ADR, que documenta escolha entre alternativas: [`docs/licoes-aprendidas.md`](docs/licoes-aprendidas.md).
+
 ## FinOps
 
 Simulações de custo (Databricks Pricing Calculator e Azure Pricing Calculator) para um cenário hipotético de produção: [`docs/custos/`](docs/custos/).
