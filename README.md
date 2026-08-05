@@ -43,6 +43,7 @@ Cada decisão de arquitetura relevante está documentada com contexto, alternati
 | [007](docs/adr/adr-007-alertas.md) | Alertas (detecção → notificação) |
 | [008](docs/adr/adr-008-widgets-reprocessamento.md) | Widgets e reprocessamento/backfill |
 | [009](docs/adr/adr-009-retencao-landing-zone.md) | Retenção da Landing Zone |
+| [010](docs/adr/adr-010-estrategia-geracao-dados.md) | Estratégia de geração de dados (dev, backfill, produção) |
 
 ## Lições aprendidas
 
