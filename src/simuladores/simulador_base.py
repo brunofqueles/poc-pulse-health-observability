@@ -17,6 +17,11 @@ O que cada subclasse precisa implementar:
 - gerar_registros(data_referencia) — a lógica de geração propriamente dita (dbldatagen/Faker)
 - gerar_seed() — opcional, só se o sistema tiver dimensão fixa (catálogo)
 
+Nota técnica: `dbutils` não é injetado automaticamente em arquivos .py importados
+(diferente de dentro de um notebook) — por isso é recebido explicitamente no
+construtor, assim como `spark`. Quem instancia a classe a partir de um notebook
+passa o `dbutils` já disponível ali.
+
 Referências: ADR-001 (Landing Zone), ADR-003 (Programação Orientada a Objetos),
 ADR-008 (Widgets e reprocessamento).
 """
@@ -34,9 +39,11 @@ class SimuladorDeSistema(ABC):
     definindo o schema de geração e o calendário de operação. Ver ADR-003.
     """
 
-    def __init__(self, spark, catalog: str = "poc_pulse_observability"):
+    def __init__(self, spark, dbutils, catalog: str = "poc_pulse_observability", volume_landing: str = "raw"):
         self.spark = spark
+        self.dbutils = dbutils
         self.catalog = catalog
+        self.volume_landing = volume_landing
 
     @property
     @abstractmethod
@@ -70,7 +77,7 @@ class SimuladorDeSistema(ABC):
     def caminho_landing(self, data_referencia: date) -> str:
         """Monta o path da Landing Zone para este sistema e data (ADR-001)."""
         data_str = data_referencia.strftime("%Y-%m-%d")
-        return f"/Volumes/{self.catalog}/landing/{self.nome_sistema}/data={data_str}"
+        return f"/Volumes/{self.catalog}/landing/{self.volume_landing}/{self.nome_sistema}/data={data_str}"
 
     def gerar_dia(self, data_referencia: date) -> dict:
         """
@@ -114,7 +121,7 @@ class SimuladorDeSistema(ABC):
 
     def caminho_landing_seed(self) -> str:
         """Caminho da Landing Zone para dados de seed, sem partição de data."""
-        return f"/Volumes/{self.catalog}/landing/{self.nome_sistema}/_seed"
+        return f"/Volumes/{self.catalog}/landing/{self.volume_landing}/{self.nome_sistema}/_seed"
 
     def executar_seed(self) -> dict:
         """Executa a geração de seed e grava na Landing Zone, se houver dado de dimensão fixa."""
@@ -134,4 +141,4 @@ class SimuladorDeSistema(ABC):
     def _gravar_json(self, registros: list, destino: str) -> None:
         """Grava a lista de registros como JSON linha-a-linha (formato esperado pelo Autoloader)."""
         conteudo = "\n".join(json.dumps(r, ensure_ascii=False) for r in registros)
-        dbutils.fs.put(destino, conteudo, overwrite=True)
+        self.dbutils.fs.put(destino, conteudo, overwrite=True)
