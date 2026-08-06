@@ -48,14 +48,18 @@ Catalog único `poc_pulse_observability` (nome ajustado para manter o prefixo `p
 
 **Nota sobre `pipeline_runs`:** o status de cada execução não é binário (sucesso/falha) — existe um terceiro estado, **"dia não operacional"**, para quando o simulador de um sistema não gera arquivo por não ser dia de operação (ver calendário por sistema em `business-context.md`). Esse terceiro estado não deve disparar alerta de falha (ADR-007) nem impedir o Job mensal de considerar o mês completo (ADR-006).
 
+**Nota sobre ordem de geração:** além da dependência de Task na transformação (ADR-006), existe uma dependência de ordem já na própria geração — `SimuladorERP` lê `pedido_id` real diretamente da Landing Zone do CRM, exigindo que o `SimuladorCRM` rode primeiro para a mesma `data_referencia` (ver ADR-011).
+
 ### Os 4 pipelines (Fase 1)
 
-| Pipeline | Fonte | Camada Bronze |
+| Pipeline | Fonte | Tabelas Bronze |
 |---|---|---|
-| ERP (Manufacturing + Distribution) | dbldatagen — módulos Produção e Estoque na mesma fonte | `poc_pulse_observability.bronze.erp_producao`, `poc_pulse_observability.bronze.erp_estoque` |
-| CRM (Commercial) | dbldatagen + Faker (nomes, endereços, emails) | `poc_pulse_observability.bronze.crm_pedidos`, `poc_pulse_observability.bronze.crm_atendimento` |
-| TMS (Logistics) | dbldatagen — inclui leitura de temperatura por remessa | `poc_pulse_observability.bronze.tms_remessas`, `poc_pulse_observability.bronze.tms_temperatura` |
-| Financeiro (SSC) | dbldatagen — depende de eventos de entrega e pedido | `poc_pulse_observability.bronze.financeiro_faturas` |
+| ERP (Manufacturing + Distribution) | dbldatagen — módulos Produção e Estoque na mesma fonte | `erp_lotes_producao`, `erp_posicoes_estoque`, `erp_notas_expedicao` |
+| CRM (Commercial) | dbldatagen + Faker (nomes, empresas, emails) | `crm_pedidos`, `crm_itens_pedido`, `crm_atendimento` |
+| TMS (Logistics) | dbldatagen — inclui leitura de temperatura por remessa | `tms_remessas`, `tms_leituras_temperatura`, `tms_comprovantes_entrega` |
+| Financeiro (SSC) | dbldatagen — depende de eventos de entrega e pedido | `financeiro_faturas`, `financeiro_contas_receber` |
+
+Schema detalhado de cada tabela, por sistema: `docs/schemas/`.
 
 ## 4. Componentes e justificativa
 
@@ -104,7 +108,16 @@ Adicionar o 5º pipeline (separar Distribution do ERP) é o teste de que o desen
 - `adr-006-orquestracao-dependencias.md` — Job diário com Tasks dependentes + Job mensal consultando observabilidade
 - `adr-007-alertas.md` — Job Notifications nativo + Notificador customizado em PySpark (evidência de spike SMTP)
 - `adr-008-widgets-reprocessamento.md` — parametrização e gatilho de backfill
+- `adr-009-retencao-landing-zone.md` — retenção de 30 dias, Job de limpeza agendado
+- `adr-010-estrategia-geracao-dados.md` — geração dev/backfill/produção, ACID vs. concorrência
+- `adr-011-dependencia-geracao-cross-sistema.md` — ordem de execução CRM → ERP na geração
 
-**Infraestrutura já criada:** catalog `poc_pulse_observability` e os 5 schemas (`landing`, `bronze`, `silver`, `gold`, `observability`) — confirmados via Catalog Explorer, com tags aplicadas e herança validada.
+**Infraestrutura já criada:** catalog `poc_pulse_observability`, os 5 schemas, tags aplicadas, Volume `raw` na Landing Zone.
 
-**Próximo passo real:** schema detalhado por sistema (campos, tipos, chaves de negócio) e estrutura de `src/` (simuladores, qualidade, notificadores, transformação).
+**Código já implementado (`src/`):**
+- `simuladores/simulador_base.py` — classe base (OOP, ADR-003)
+- `simuladores/sujeira_intencional.py` — 6 funções puras de sujeira, testadas
+- `simuladores/simulador_erp.py` — completo: `erp_lotes_producao`, `erp_posicoes_estoque`, `erp_notas_expedicao`
+- `simuladores/simulador_crm.py` — completo: `crm_pedidos`, `crm_itens_pedido`, `crm_atendimento`
+
+**Próximo passo real:** `simulador_tms.py` (referencia `nota_expedicao_id` do ERP e implementa a falha cruzada de cadeia fria), seguido de `simulador_financeiro.py`. Depois: notebook orquestrador com Widgets, Autoloader, transformação Silver/Gold.

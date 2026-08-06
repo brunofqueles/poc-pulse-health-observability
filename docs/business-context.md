@@ -54,7 +54,7 @@ Catálogo reduzido a 3 produtos deliberadamente, cada um cobrindo uma forma farm
 | Entidades de negócio | Centro de Distribuição, Posição de Estoque (lote + local + quantidade), Pedido de Separação, Nota de Expedição |
 | Regras de negócio críticas | 1. Só entra em estoque lote com status "liberado" pela Manufacturing.<br>2. Alocação de pedido segue FEFO (first-expired, first-out) — não FIFO simples.<br>3. `lote_id` propagado da posição de estoque até a nota de expedição, sem quebra.<br>4. Estoque negativo é estado inválido — nunca deveria acontecer |
 | KPIs de negócio | Acuracidade de estoque (contagem física vs. sistema, simulada); tempo de ciclo de separação (pedido recebido → expedido); % de pedidos separados via FEFO corretamente |
-| Volumetria assumida (premissa) | ~150–300 pedidos de separação/dia |
+| Volumetria assumida (premissa) | ~150–300 pedidos de separação/dia (notas de expedição); ~30–60 posições de estoque/dia (snapshot por centro de distribuição, não é 1:1 com pedidos) |
 | Consumidor do dado | Pulse Logistics (o que está pronto pra rota); Commercial (status do pedido); plataforma de observabilidade (SLA de separação, alerta de estoque negativo) |
 
 ---
@@ -84,6 +84,8 @@ Catálogo reduzido a 3 produtos deliberadamente, cada um cobrindo uma forma farm
 | KPIs de negócio | Volume de pedidos por representante/região; taxa de reclamação por lote; tempo médio de primeira resposta em atendimento |
 | Volumetria assumida (premissa) | ~150–300 pedidos/dia; ~20–40 interações de atendimento/dia |
 | Consumidor do dado | Distribution (o que precisa ser separado); Logistics (destino da entrega); Qualidade/Compliance (reclamação x lote); plataforma de observabilidade (volume anômalo, taxa de reclamação por lote) |
+
+**Nota de implementação:** nesta fase, clientes e representantes nascem como catálogo fixo (25 clientes, 8 representantes) gerado uma única vez — simplificação consciente do "crescimento esporádico" mencionado no processo-chave. Cadastro incremental real de cliente fica para uma evolução futura, não implementado nesta entrega.
 
 ---
 

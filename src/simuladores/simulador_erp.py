@@ -222,7 +222,10 @@ class SimuladorERP(SimuladorDeSistema):
         if not pedidos_disponiveis:
             return []
 
-        num_notas = min(len(pedidos_disponiveis), random.randint(30, 60))
+        # Volumetria alinhada à premissa de negócio já documentada (~150-300
+        # pedidos de separação/dia, business-context.md) — a maioria dos
+        # pedidos do dia é expedida, não uma fração pequena e fixa.
+        num_notas = min(len(pedidos_disponiveis), random.randint(150, 300))
         pedidos_selecionados = random.sample(pedidos_disponiveis, num_notas)
 
         registros = []
