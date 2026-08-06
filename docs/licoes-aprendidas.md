@@ -35,3 +35,20 @@ Resultado: `'poc_pulse_observability\xa0'` — um caractere de espaço não sepa
 **Efeito colateral descoberto em seguida:** `dbutils`, disponível automaticamente dentro de um notebook, **não** é injetado automaticamente em um arquivo `.py` importado — gerando `NameError: name 'dbutils' is not defined` na primeira tentativa de gravação real. Corrigido recebendo `dbutils` explicitamente no construtor da classe, no mesmo padrão já usado para `spark`.
 
 **Lição para o futuro:** notebooks com célula de markdown são adequados para código **narrativo** (lido diretamente por uma pessoa, ex.: o notebook que vai orquestrar a geração diária). Código feito para ser **reutilizado por outros arquivos** (classes, funções compartilhadas) deve nascer como `.py` puro desde o início, evitando essa migração no meio do caminho. Qualquer classe/função nesse formato que precise de `spark` ou `dbutils` deve recebê-los explicitamente — nunca assumir que estarão disponíveis implicitamente.
+
+---
+
+## Lição 3 — Duas particularidades do `dbldatagen` que geram bug silencioso, não erro
+
+**O que aconteceu:** ao testar `dbldatagen.DataGenerator` isoladamente antes de usar nos simuladores, dois comportamentos saíram diferentes do esperado, nenhum dos dois com erro explícito — os dois exigiram inspecionar o resultado com atenção para perceber.
+
+**Problema 1 — coluna de seed duplicada:** todo `DataGenerator` cria automaticamente uma coluna de controle interna chamada `id`. Se o schema definido também tiver uma coluna própria chamada `id`, o resultado final tem **duas colunas `id`** — sem erro, sem aviso forte (só um `WARNING` fácil de não notar), e qualquer gravação subsequente (ex.: JSON) perde uma das duas silenciosamente.
+**Correção:** usar `seedColumnName="_seed_id"` (ou outro nome que não colida) na criação do `DataGenerator`.
+
+**Problema 2 — coluna renomeada some do resultado:** ao renomear a coluna de seed via `seedColumnName`, ela deixa de aparecer no `.build()` final — diferente do esperado (que ela continuasse presente, só renomeada). Tentar acessar essa coluna depois (`row['_seed_id']`) gera `PySparkValueError`.
+**Correção:** não depender da coluna de seed do `dbldatagen` para numeração/chave — gerar sequência via `enumerate()` em Python puro sobre o resultado de `.collect()`, com controle total.
+
+**Problema 3 (relacionado) — valores sequenciais em vez de aleatórios:** colunas numéricas (`minValue`/`maxValue`) sem o parâmetro `random=True` explícito saem em sequência crescente (10, 11, 12, 13...), não aleatórias — fácil de não perceber em uma amostra pequena.
+**Correção:** sempre incluir `random=True` em coluna numérica que deveria variar de forma realista.
+
+**Lição para o futuro:** ao adotar uma biblioteca de terceiros para geração de dado, testar isoladamente com uma amostra pequena e **inspecionar o schema resultante junto com os valores** (não só rodar sem erro) — comportamento de biblioteca externa não documentado com clareza total deve ser tratado como incerto até verificado na prática, mesmo quando a chamada "funciona".
