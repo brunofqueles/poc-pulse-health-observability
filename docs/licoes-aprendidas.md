@@ -52,3 +52,29 @@ Resultado: `'poc_pulse_observability\xa0'` — um caractere de espaço não sepa
 **Correção:** sempre incluir `random=True` em coluna numérica que deveria variar de forma realista.
 
 **Lição para o futuro:** ao adotar uma biblioteca de terceiros para geração de dado, testar isoladamente com uma amostra pequena e **inspecionar o schema resultante junto com os valores** (não só rodar sem erro) — comportamento de biblioteca externa não documentado com clareza total deve ser tratado como incerto até verificado na prática, mesmo quando a chamada "funciona".
+
+---
+
+## Lição 4 — `date` não é `datetime`, e isso quebra de duas formas diferentes
+
+**O que aconteceu:** ao implementar `SimuladorTMS`, duas linhas de código trataram um objeto `date` como se fosse `datetime`, causando um erro explícito e um bug silencioso.
+
+**Problema 1 — `AttributeError`:** código chamou `.date()` sobre um valor que já era `date` (resultado de `date + timedelta`). `.date()` é método de `datetime` (extrai só a parte de data de um timestamp completo) — `date` não tem esse método, porque já *é* só a parte de data.
+**Correção:** remover a chamada `.date()` quando o valor de origem já é `date`.
+
+**Problema 2 — bug silencioso, sem erro nenhum:** `date + timedelta(hours=8)` não avança nenhum dia, porque a aritmética de `date` só considera o componente `.days` do `timedelta` — horas menores que 24 são descartadas silenciosamente. Uma rota de 8h, 16h ou 18h de trânsito resultaria em "entrega no mesmo dia da expedição", sem erro nenhum acusando isso.
+**Correção:** converter horas em dias completos antes de somar, arredondando para cima (`-(-horas // 24)`), já que qualquer trânsito, mesmo curto, geralmente significa "próximo dia útil" em um cenário de granularidade diária.
+
+**Lição para o futuro:** ao misturar `date` (granularidade de dia) com durações em horas/minutos, converter explicitamente para a granularidade certa **antes** da operação — nunca confiar que a aritmética "vai fazer o que parece óbvio". Isso é ainda mais perigoso quando não gera erro (Problema 2) do que quando gera (Problema 1): o primeiro se descobre rodando; o segundo só se descobre inspecionando o resultado com atenção.
+
+---
+
+## Lição 5 — campo com tipo misto (booleano + string) vira string ao voltar do JSON, e o booleano some
+
+**O que aconteceu:** `pod_confirmado` (TMS) grava `True` (booleano Python) quando confirmado, ou uma das variações de `valor_nulo_variado()` (`None`, `""`, `"N/A"`, `"NULL"`) quando não. Ao ler esse campo de volta via `spark.read.json()`, o filtro `linha.pod_confirmado is True` nunca encontrava nenhuma linha — mesmo havendo, de fato, entregas confirmadas gravadas.
+
+**Diagnóstico:** `groupBy("pod_confirmado").count()` revelou que o Spark inferiu a coluna inteira como **string** (porque o campo mistura tipos diferentes entre registros) — o booleano `True` virou o texto `"true"` (minúsculo), não o booleano Python `True`. `linha.pod_confirmado is True` comparava com o objeto errado.
+
+**Correção:** comparar como string (`str(valor).lower() == "true"`), reforçando a própria regra que o projeto já havia estabelecido — Bronze é 100% string, sem exceção — mesmo quando o código-fonte usa um tipo nativo do Python antes de serializar.
+
+**Lição para o futuro:** um campo que mistura booleano com representações de nulo no mesmo registro é convertido para string pelo motor ao ser lido de volta de um formato semi-estruturado (JSON) — nunca assumir que um `True` do Python sobrevive como booleano depois de ir e voltar por um arquivo. Ler o schema inferido (`df.printSchema()` ou `df.dtypes`) antes de escrever qualquer filtro sobre um campo assim evita esse erro por completo.

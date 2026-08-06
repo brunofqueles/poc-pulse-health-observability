@@ -48,7 +48,7 @@ Catalog único `poc_pulse_observability` (nome ajustado para manter o prefixo `p
 
 **Nota sobre `pipeline_runs`:** o status de cada execução não é binário (sucesso/falha) — existe um terceiro estado, **"dia não operacional"**, para quando o simulador de um sistema não gera arquivo por não ser dia de operação (ver calendário por sistema em `business-context.md`). Esse terceiro estado não deve disparar alerta de falha (ADR-007) nem impedir o Job mensal de considerar o mês completo (ADR-006).
 
-**Nota sobre ordem de geração:** além da dependência de Task na transformação (ADR-006), existe uma dependência de ordem já na própria geração — `SimuladorERP` lê `pedido_id` real diretamente da Landing Zone do CRM, exigindo que o `SimuladorCRM` rode primeiro para a mesma `data_referencia` (ver ADR-011).
+**Nota sobre ordem de geração:** além da dependência de Task na transformação (ADR-006), existe uma dependência de ordem já na própria geração — a cadeia completa é CRM → ERP → TMS → Financeiro, cada sistema lendo o(s) sistema(s) anterior(es) da Landing Zone para a mesma `data_referencia` (ver ADR-011, incluindo o adendo). Como consequência, a cadeia inteira (pedido → produção → expedição → entrega → faturamento) colapsa no mesmo dia na simulação atual — sem defasagem real de tempo entre as etapas.
 
 ### Os 4 pipelines (Fase 1)
 
@@ -114,10 +114,12 @@ Adicionar o 5º pipeline (separar Distribution do ERP) é o teste de que o desen
 
 **Infraestrutura já criada:** catalog `poc_pulse_observability`, os 5 schemas, tags aplicadas, Volume `raw` na Landing Zone.
 
-**Código já implementado (`src/`):**
+**Código já implementado (`src/`) — os 4 simuladores completos:**
 - `simuladores/simulador_base.py` — classe base (OOP, ADR-003)
 - `simuladores/sujeira_intencional.py` — 6 funções puras de sujeira, testadas
-- `simuladores/simulador_erp.py` — completo: `erp_lotes_producao`, `erp_posicoes_estoque`, `erp_notas_expedicao`
-- `simuladores/simulador_crm.py` — completo: `crm_pedidos`, `crm_itens_pedido`, `crm_atendimento`
+- `simuladores/simulador_erp.py` — `erp_lotes_producao`, `erp_posicoes_estoque`, `erp_notas_expedicao`
+- `simuladores/simulador_crm.py` — `crm_pedidos`, `crm_itens_pedido`, `crm_atendimento`
+- `simuladores/simulador_tms.py` — `tms_remessas`, `tms_leituras_temperatura`, `tms_comprovantes_entrega` (falha cruzada de cadeia fria validada por contagem real)
+- `simuladores/simulador_financeiro.py` — `financeiro_faturas`, `financeiro_contas_receber`
 
-**Próximo passo real:** `simulador_tms.py` (referencia `nota_expedicao_id` do ERP e implementa a falha cruzada de cadeia fria), seguido de `simulador_financeiro.py`. Depois: notebook orquestrador com Widgets, Autoloader, transformação Silver/Gold.
+**Próximo passo real:** notebook orquestrador com Widgets (ADR-008), chamando os 4 simuladores na ordem correta (CRM → ERP → TMS → Financeiro, ADR-011). Depois: Autoloader Landing→Bronze, transformação Silver/Gold.
