@@ -24,3 +24,19 @@ Quando possível (dias com produção nova, Segunda a Sexta), `lote_id` referenc
 - A ordem de execução dos simuladores por sistema deixa de ser arbitrária — precisa ser conhecida e respeitada por quem rodar o backfill (ADR-010) ou desenhar o Job diário real (ADR-006): CRM antes de ERP, para a mesma data.
 - `SimuladorERP` passa a depender de leitura via Spark (`spark.read.json`), não só escrita — primeira vez que um simulador lê dado de outro sistema na Landing Zone.
 - Se o TMS também precisar ler dado de outro sistema (provável, dado que referencia `nota_expedicao_id` do ERP), o mesmo padrão se aplica — tratar como precedente, não repensar do zero.
+
+## Adendo — extensão confirmada para TMS e Financeiro
+
+A previsão acima se confirmou, e foi além: a cadeia completa de dependência de geração ficou:
+
+```
+SimuladorCRM ──> SimuladorERP ──> SimuladorTMS ──> SimuladorFinanceiro
+ (crm_pedidos)   (lê crm_pedidos;  (lê erp_notas_    (lê tms_comprovantes_
+                  gera notas de     expedicao +        entrega + tms_remessas;
+                  expedição)        erp_lotes_          lê crm_pedidos)
+                                    producao)
+```
+
+`SimuladorTMS` lê dois arquivos do ERP (`erp_notas_expedicao` para `pedido_id`/`lote_id`, `erp_lotes_producao` para resolver `produto_id` → `exige_cadeia_fria`, necessário para a falha cruzada de cadeia fria). `SimuladorFinanceiro` lê **dois sistemas diferentes** na mesma execução: TMS (`tms_comprovantes_entrega` + `tms_remessas`, para saber quais pedidos tiveram entrega confirmada) e CRM (`crm_pedidos`, para o valor original a reconciliar).
+
+**Descoberta adicional:** como cada sistema sempre lê o *mesmo dia* do sistema anterior (não um dia passado), a cadeia inteira — pedido, produção, expedição, entrega, faturamento — colapsa em `data_referencia` única na simulação atual. Não há defasagem real de dias entre pedido e entrega, diferente do que aconteceria numa operação real. Isso é uma extensão da mesma simplificação de continuidade já registrada no ADR-010, não uma limitação nova — mas vale este registro explícito porque afeta como interpretar a "data" de qualquer registro gerado: ela representa o dia de geração, não necessariamente o dia real em que o evento aconteceria numa cadeia física com prazo.

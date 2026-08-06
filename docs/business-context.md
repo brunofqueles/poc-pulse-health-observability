@@ -68,8 +68,10 @@ Catálogo reduzido a 3 produtos deliberadamente, cada um cobrindo uma forma farm
 | Entidades de negócio | Rota, Veículo, Remessa (vincula nota de expedição a uma rota), Leitura de Temperatura (evento por remessa), Comprovante de Entrega |
 | Regras de negócio críticas | 1. Remessa de produto com exigência de cadeia fria precisa manter temperatura dentro da faixa (ex.: 2–8°C) durante todo o transporte — violação é evento crítico.<br>2. `pedido_id` e `lote_id` propagados da Remessa até o Comprovante de Entrega — fecha a rastreabilidade ponta a ponta.<br>3. SLA de entrega definido por janela contratada — violação vira evento de SLA.<br>4. Entrega sem comprovante (POD ausente) é estado inválido.<br>5. **Veículo alocado a uma remessa de produto que exige cadeia fria precisa ser um veículo refrigerado** — violação é detectável apenas cruzando Logistics (veículo) com Manufacturing (produto/lote), não é verificação de uma tabela isolada |
 | KPIs de negócio | OTIF (On Time In Full); % de remessas com violação de cadeia fria; tempo médio de trânsito por rota |
-| Volumetria assumida (premissa) | ~150–300 remessas/dia; leitura de temperatura simulada em intervalos (ex.: a cada 30min de trânsito) |
+| Volumetria assumida (premissa) | ~150–300 remessas/dia (1:1 com notas de expedição); 3–6 leituras de temperatura por remessa refrigerada, distribuídas ao longo do trajeto (não em intervalo fixo de 30min — simplificação da implementação) |
 | Consumidor do dado | Commercial (status de entrega); Compliance/Qualidade (violação de cadeia fria pode implicar recall); plataforma de observabilidade (SLA de OTIF, anomalia de temperatura) |
+
+**Nota de implementação:** veículos (6, sendo 2 refrigerados) e rotas (4) nascem como catálogo fixo, mesmo padrão de simplificação já usado no CRM.
 
 ---
 
@@ -100,6 +102,8 @@ Catálogo reduzido a 3 produtos deliberadamente, cada um cobrindo uma forma farm
 | KPIs de negócio | DSO (dias médios até recebimento); % de faturas conciliadas sem divergência; tempo de fechamento mensal |
 | Volumetria assumida (premissa) | ~150–300 faturas/dia |
 | Consumidor do dado | Diretoria (consolidado financeiro); plataforma de observabilidade (reconciliação de valor, dependência de orquestração entre pipelines) |
+
+**Nota de implementação:** centros de custo (4, um por área operacional) nascem como catálogo fixo, mesmo padrão de simplificação já usado no CRM e no TMS. Adicionalmente: na simulação atual, a cadeia completa (pedido → produção → expedição → entrega → faturamento) colapsa na mesma `data_referencia` — não há defasagem real de dias entre pedido e entrega como aconteceria numa operação real (ver ADR-011, adendo).
 
 ---
 

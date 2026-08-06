@@ -60,7 +60,7 @@ Databricks Free Edition · PySpark · Delta Lake · Unity Catalog · Databricks 
 
 ## Status
 
-Em desenvolvimento — fase de documentação e arquitetura concluída (contexto de negócio, arquitetura técnica, 8 ADRs, FinOps); implementação de código (`src/`) em andamento.
+Em desenvolvimento — documentação e arquitetura concluídas (contexto de negócio, arquitetura técnica, 11 ADRs, FinOps, schemas detalhados). Código (`src/`): os 4 simuladores (ERP, CRM, TMS, Financeiro) completos e validados em cadeia, incluindo a falha cruzada de cadeia fria confirmada por contagem real. Próximo: notebook orquestrador com Widgets.
 
 ## Licença
 
