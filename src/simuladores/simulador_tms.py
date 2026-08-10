@@ -194,6 +194,7 @@ class SimuladorTMS(SimuladorDeSistema):
                     temperatura = random.uniform(2.0, 8.0)
 
                 leituras.append({
+                    "leitura_id": f"LEITURA-{r['remessa_id']}-{i:02d}",
                     "remessa_id": r["remessa_id"],
                     "timestamp_leitura": timestamp,
                     "temperatura_celsius": formatar_numero_sujo(temperatura),

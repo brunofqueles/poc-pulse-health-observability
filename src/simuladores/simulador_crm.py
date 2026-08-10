@@ -127,12 +127,13 @@ class SimuladorCRM(SimuladorDeSistema):
             })
 
             num_itens = random.randint(1, 4)
-            for _ in range(num_itens):
+            for indice_item in range(num_itens):
                 produto_id = random.choice(ids_produtos_validos)
                 if com_probabilidade(0.03):  # 3% SKU inexistente, de propósito (docs/schemas/crm.md)
                     produto_id = "PROD-999"
 
                 itens.append({
+                    "item_pedido_id": f"ITEM-{data_referencia.strftime('%Y%m%d')}-{indice:04d}-{indice_item:02d}",
                     "pedido_id": pedido_id,
                     "produto_id": produto_id,
                     "quantidade": formatar_numero_sujo(random.randint(1, 50), casas_decimais=0),

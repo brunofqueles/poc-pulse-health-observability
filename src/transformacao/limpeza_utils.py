@@ -81,3 +81,16 @@ def parse_nulo_variado(valor):
     nenhuma outra limpeza (ex.: chaves estrangeiras opcionais).
     """
     return None if _eh_nulo_variado(valor) else valor
+
+
+def parse_booleano_sujo(valor):
+    """
+    Converte um campo que mistura booleano real com nulo variado (ex.:
+    pod_confirmado — True quando confirmado, ou uma das representações de
+    valor_nulo_variado() quando não) para bool ou None. Ver Lição 5,
+    docs/licoes-aprendidas.md: o Spark lê esse tipo de campo como string,
+    e True vira o texto "true", não o booleano Python.
+    """
+    if _eh_nulo_variado(valor):
+        return None
+    return str(valor).strip().lower() == "true"
