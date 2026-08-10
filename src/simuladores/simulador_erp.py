@@ -180,7 +180,7 @@ class SimuladorERP(SimuladorDeSistema):
         )
 
         registros = []
-        for row in df_base.collect():
+        for indice, row in enumerate(df_base.collect()):
             dia_lote = data_referencia - timedelta(days=random.randint(0, 5))
             lote_id_referenciado = f"LOTE-{dia_lote.strftime('%Y%m%d')}-{random.randint(0, 79):04d}"
 
@@ -189,6 +189,7 @@ class SimuladorERP(SimuladorDeSistema):
                 quantidade = -quantidade
 
             registros.append({
+                "posicao_id": f"POS-{data_referencia.strftime('%Y%m%d')}-{indice:04d}",
                 "lote_id": lote_id_referenciado,
                 "centro_distribuicao_id": formatar_texto_sujo(row["centro_distribuicao_id"]),
                 "quantidade": formatar_numero_sujo(quantidade, casas_decimais=0),
