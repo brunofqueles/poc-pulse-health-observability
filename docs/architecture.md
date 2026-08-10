@@ -110,16 +110,17 @@ Adicionar o 5º pipeline (separar Distribution do ERP) é o teste de que o desen
 - `adr-008-widgets-reprocessamento.md` — parametrização e gatilho de backfill
 - `adr-009-retencao-landing-zone.md` — retenção de 30 dias, Job de limpeza agendado
 - `adr-010-estrategia-geracao-dados.md` — geração dev/backfill/produção, ACID vs. concorrência
-- `adr-011-dependencia-geracao-cross-sistema.md` — ordem de execução CRM → ERP na geração
+- `adr-011-dependencia-geracao-cross-sistema.md` — ordem de execução CRM → ERP → TMS → Financeiro na geração
+- `adr-012-ingestao-autoloader.md` — configuração e convenções da ingestão Landing→Bronze
 
 **Infraestrutura já criada:** catalog `poc_pulse_observability`, os 5 schemas, tags aplicadas, Volume `raw` na Landing Zone.
 
-**Código já implementado (`src/`) — os 4 simuladores completos:**
+**Código já implementado (`src/`):**
 - `simuladores/simulador_base.py` — classe base (OOP, ADR-003)
 - `simuladores/sujeira_intencional.py` — 6 funções puras de sujeira, testadas
-- `simuladores/simulador_erp.py` — `erp_lotes_producao`, `erp_posicoes_estoque`, `erp_notas_expedicao`
-- `simuladores/simulador_crm.py` — `crm_pedidos`, `crm_itens_pedido`, `crm_atendimento`
-- `simuladores/simulador_tms.py` — `tms_remessas`, `tms_leituras_temperatura`, `tms_comprovantes_entrega` (falha cruzada de cadeia fria validada por contagem real)
-- `simuladores/simulador_financeiro.py` — `financeiro_faturas`, `financeiro_contas_receber`
+- `simuladores/simulador_erp.py`, `simulador_crm.py`, `simulador_tms.py`, `simulador_financeiro.py` — os 4 simuladores completos
+- `simuladores/simulador_factory.py` — mapeamento sistema → classe e ordem de execução (ADR-011)
+- `orquestracao/gerar_dados.py` — notebook orquestrador com Widgets (ADR-008), ponto de entrada único, testado ponta a ponta
+- `ingestao/ingestor_autoloader.py` — ingestão genérica Landing→Bronze via Autoloader (ADR-012), validada com `erp_lotes_producao`
 
-**Próximo passo real:** notebook orquestrador com Widgets (ADR-008), chamando os 4 simuladores na ordem correta (CRM → ERP → TMS → Financeiro, ADR-011). Depois: Autoloader Landing→Bronze, transformação Silver/Gold.
+**Próximo passo real:** generalizar `IngestorAutoloader` para as 11 tabelas de evento diário, provavelmente via um notebook orquestrador de ingestão análogo ao `gerar_dados.py`. Depois: transformação Bronze→Silver→Gold (MERGE), Job de limpeza da Landing Zone, Databricks Asset Bundles.

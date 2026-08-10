@@ -78,3 +78,13 @@ Resultado: `'poc_pulse_observability\xa0'` — um caractere de espaço não sepa
 **Correção:** comparar como string (`str(valor).lower() == "true"`), reforçando a própria regra que o projeto já havia estabelecido — Bronze é 100% string, sem exceção — mesmo quando o código-fonte usa um tipo nativo do Python antes de serializar.
 
 **Lição para o futuro:** um campo que mistura booleano com representações de nulo no mesmo registro é convertido para string pelo motor ao ser lido de volta de um formato semi-estruturado (JSON) — nunca assumir que um `True` do Python sobrevive como booleano depois de ir e voltar por um arquivo. Ler o schema inferido (`df.printSchema()` ou `df.dtypes`) antes de escrever qualquer filtro sobre um campo assim evita esse erro por completo.
+
+---
+
+## Lição 6 — `lastProgress` nunca é `None` com `Trigger.AvailableNow`, e isso já era conhecido
+
+**O que aconteceu:** `IngestorAutoloader.executar()` classificava o status como `"sucesso"` mesmo quando zero arquivos novos foram processados — porque a lógica original checava `if progresso is None` para decidir se não havia dado novo, mas `query.lastProgress` **sempre** retorna um objeto preenchido com `Trigger.AvailableNow`, mesmo sem nenhum arquivo para processar. A checagem certa precisa olhar `numFilesProcessed`, não a presença de `lastProgress`.
+
+**O que torna esta lição diferente das anteriores:** esse comportamento específico do Autoloader já estava registrado como conhecimento do projeto anterior (`poc-lakehouse-food-latam`), **antes** deste projeto sequer começar. Reencontramos o mesmo bug do zero, gastando um ciclo de debug evitável, porque não consultamos as lições já documentadas antes de escrever o código pela primeira vez.
+
+**Lição para o futuro (a mais importante desta lista):** antes de implementar algo que já foi construído em um projeto anterior — mesmo que o código em si não seja reaproveitado — **consultar as lições aprendidas documentadas primeiro**. Elas existem exatamente para evitar redescobrir o mesmo problema da forma mais cara (debugando em produção de código novo) em vez da mais barata (lendo um parágrafo antes de escrever a primeira linha).
