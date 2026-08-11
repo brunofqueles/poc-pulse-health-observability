@@ -46,6 +46,7 @@ Cada decisão de arquitetura relevante está documentada com contexto, alternati
 | [010](docs/adr/adr-010-estrategia-geracao-dados.md) | Estratégia de geração de dados (dev, backfill, produção) |
 | [011](docs/adr/adr-011-dependencia-geracao-cross-sistema.md) | Dependência de ordem na geração cross-sistema |
 | [012](docs/adr/adr-012-ingestao-autoloader.md) | Ingestão Landing Zone → Bronze via Autoloader |
+| [013](docs/adr/adr-013-transformacao-bronze-silver.md) | Transformação Bronze → Silver (função genérica config-driven) |
 
 ## Lições aprendidas
 
@@ -61,7 +62,7 @@ Databricks Free Edition · PySpark · Delta Lake · Unity Catalog · Databricks 
 
 ## Status
 
-Em desenvolvimento — documentação e arquitetura concluídas (contexto de negócio, arquitetura técnica, 12 ADRs, FinOps, schemas detalhados). Código (`src/`): os 4 simuladores completos, orquestrados por um notebook único com Widgets (execução ponta a ponta validada), e ingestão Landing→Bronze via Autoloader iniciada (padrão validado com `erp_lotes_producao`, generalização para as 11 tabelas em andamento).
+Em desenvolvimento — documentação e arquitetura concluídas (contexto de negócio, arquitetura técnica, 13 ADRs, FinOps, schemas detalhados). Código (`src/`): os 4 simuladores completos, orquestrados por Widgets; Bronze e Silver completas nas 11 tabelas de evento diário, com idempotência validada em ingestão e transformação. Próximo: Gold (KPIs de negócio + observabilidade).
 
 ## Licença
 

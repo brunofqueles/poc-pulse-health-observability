@@ -29,6 +29,7 @@
 
 | Campo | Tipo lógico | Sujeira injetada | Nota |
 |---|---|---|---|
+| `posicao_id` | string | — | Chave de negócio (adicionada após MERGE INTO exigir chave verdadeiramente única — `lote_id`+`centro_distribuicao_id` sozinhos não garantiam unicidade) |
 | `lote_id` | string (FK) | — | só lotes com QC aprovado |
 | `centro_distribuicao_id` | string | espaço/caixa inconsistente | |
 | `quantidade` | int | número com vírgula; ocasionalmente negativo (de propósito) | testa regra de estoque negativo |

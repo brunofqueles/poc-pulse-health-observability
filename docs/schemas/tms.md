@@ -31,12 +31,13 @@
 | `data_expedicao` | formato misto | |
 | `data_entrega_prevista` | formato misto | derivada de expedição + SLA |
 
-### `bronze.tms_leituras_temperatura` (evento de alta frequência, ~30min de trânsito, só para veículo refrigerado)
+### `bronze.tms_leituras_temperatura` (evento de alta frequência, 3-6 leituras por remessa refrigerada, só para veículo refrigerado)
 
 | Campo | Sujeira injetada | Nota |
 |---|---|---|
+| `leitura_id` | — | Chave de negócio (adicionada após MERGE INTO exigir chave verdadeiramente única — `remessa_id`+`timestamp_leitura` não era garantidamente único pelo código) |
 | `remessa_id` (FK) | — | |
-| `timestamp_leitura` | formato de timestamp inconsistente | |
+| `timestamp_leitura` | formato fixo, sem sujeira intencional (correção: a versão anterior deste documento indicava sujeira aqui, mas o simulador nunca implementou isso) | |
 | `temperatura_celsius` | número com vírgula; ocasionalmente fora de 2–8°C mesmo em veículo refrigerado | segunda causa de violação: falha de equipamento |
 
 ### `bronze.tms_comprovantes_entrega` (evento diário)
