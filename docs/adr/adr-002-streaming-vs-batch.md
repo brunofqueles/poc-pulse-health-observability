@@ -37,3 +37,11 @@ Critério explícito para decidir streaming vs. batch em qualquer camada futura:
 - Reprocessamento/backfill (ver ADR-008) é natural em Bronze→Silver→Gold: basta rodar o MERGE novamente para a `data_referencia` desejada, sem gerenciar ou resetar checkpoint.
 - Streaming contínuo nunca é necessário em nenhuma camada — compatível com a limitação da Free Edition, que só suporta `Trigger.AvailableNow`/`Once` (ver `architecture.md`, seção de limitações).
 - Chaves de negócio (`lote_id`, `pedido_id`) precisam estar bem definidas antes da implementação do MERGE em cada sistema — pré-requisito tratado no schema detalhado por pipeline, ainda pendente.
+
+## Adendo — MERGE exige chave verdadeiramente única, não só "identificador nomeado"
+
+Ao implementar a transformação Bronze→Silver de fato, 3 tabelas (`erp_posicoes_estoque`, `crm_itens_pedido`, `tms_leituras_temperatura`) não tinham nenhuma coluna que garantisse unicidade por linha — apenas combinações de FK + valor (`lote_id`+`centro_distribuicao_id`, `pedido_id`+`produto_id`, `remessa_id`+`timestamp_leitura`), sem garantia no código de que essas combinações não se repetiriam. `MERGE INTO` com uma condição que não identifica uma linha só falha com erro de "múltiplas linhas casando".
+
+**Correção:** as 3 tabelas ganharam uma coluna de ID sintético próprio (`posicao_id`, `item_pedido_id`, `leitura_id`), gerada no mesmo padrão sequencial já usado no projeto — não chave composta, que continuaria com risco residual de colisão em pelo menos um caso (`crm_itens_pedido`, onde o mesmo produto pode aparecer mais de uma vez no mesmo pedido).
+
+**Lição para desenho futuro:** ao definir o schema de uma tabela de evento (não dimensão), verificar explicitamente se existe uma coluna que garanta unicidade de linha — não assumir que a combinação de chaves estrangeiras é suficiente só porque "faz sentido" ser única.

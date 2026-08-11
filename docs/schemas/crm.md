@@ -35,6 +35,7 @@
 
 | Campo | Sujeira injetada | Nota |
 |---|---|---|
+| `item_pedido_id` | — | Chave de negócio (adicionada após MERGE INTO exigir chave verdadeiramente única — um pedido pode ter o mesmo `produto_id` repetido entre itens) |
 | `pedido_id` (FK) | — | |
 | `produto_id` (FK cross-sistema, ERP) | ocasionalmente inexistente, de propósito | testa regra de SKU inválido |
 | `quantidade` | número com vírgula | |

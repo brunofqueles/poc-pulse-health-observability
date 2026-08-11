@@ -112,15 +112,22 @@ Adicionar o 5º pipeline (separar Distribution do ERP) é o teste de que o desen
 - `adr-010-estrategia-geracao-dados.md` — geração dev/backfill/produção, ACID vs. concorrência
 - `adr-011-dependencia-geracao-cross-sistema.md` — ordem de execução CRM → ERP → TMS → Financeiro na geração
 - `adr-012-ingestao-autoloader.md` — configuração e convenções da ingestão Landing→Bronze
+- `adr-013-transformacao-bronze-silver.md` — função genérica config-driven, 6 categorias de limpeza
 
 **Infraestrutura já criada:** catalog `poc_pulse_observability`, os 5 schemas, tags aplicadas, Volume `raw` na Landing Zone.
 
 **Código já implementado (`src/`):**
 - `simuladores/simulador_base.py` — classe base (OOP, ADR-003)
 - `simuladores/sujeira_intencional.py` — 6 funções puras de sujeira, testadas
-- `simuladores/simulador_erp.py`, `simulador_crm.py`, `simulador_tms.py`, `simulador_financeiro.py` — os 4 simuladores completos
+- `simuladores/simulador_erp.py`, `simulador_crm.py`, `simulador_tms.py`, `simulador_financeiro.py` — os 4 simuladores completos, com chave de negócio própria em toda tabela de evento
 - `simuladores/simulador_factory.py` — mapeamento sistema → classe e ordem de execução (ADR-011)
-- `orquestracao/gerar_dados.py` — notebook orquestrador com Widgets (ADR-008), ponto de entrada único, testado ponta a ponta
-- `ingestao/ingestor_autoloader.py` — ingestão genérica Landing→Bronze via Autoloader (ADR-012), validada com `erp_lotes_producao`
+- `orquestracao/gerar_dados.py` — notebook orquestrador de geração, com Widgets (ADR-008)
+- `orquestracao/ingerir_dados.py` — notebook orquestrador de ingestão, as 11 tabelas
+- `ingestao/ingestor_autoloader.py` — ingestão genérica Landing→Bronze via Autoloader (ADR-012)
+- `transformacao/limpeza_utils.py` — 6 funções puras de limpeza, espelho de `sujeira_intencional.py`
+- `transformacao/configuracao_tabelas.py` — configuração declarativa das 11 tabelas
+- `transformacao/transformar_bronze_para_silver.py` — função genérica de transformação (ADR-013)
 
-**Próximo passo real:** generalizar `IngestorAutoloader` para as 11 tabelas de evento diário, provavelmente via um notebook orquestrador de ingestão análogo ao `gerar_dados.py`. Depois: transformação Bronze→Silver→Gold (MERGE), Job de limpeza da Landing Zone, Databricks Asset Bundles.
+**Estado dos dados:** Bronze e Silver completas nas 11 tabelas de evento diário, validadas em 4 dias simulados (03, 07, 08, 10/08/2026), com idempotência confirmada em ingestão e transformação.
+
+**Próximo passo real:** transformação Silver → Gold (KPIs de negócio + observabilidade). Depois: Job de limpeza da Landing Zone, Databricks Asset Bundles, alertas reais.
