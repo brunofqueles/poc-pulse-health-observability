@@ -203,16 +203,34 @@ class SimuladorTMS(SimuladorDeSistema):
         return leituras
 
     def _gerar_comprovantes(self, data_referencia: date, remessas: list) -> list:
-        """Gera um comprovante de entrega por remessa, com POD ausente em ~7% dos casos, de propósito."""
+        """
+        Gera um comprovante de entrega por remessa. data_entrega_real varia
+        em relação à prevista (80% no prazo, 15% atrasada 1-3 dias, 5%
+        devolvida) — status_entrega é derivado dessa comparação, não
+        sorteado de forma independente (correção: a versão anterior gerava
+        data_entrega_real sempre igual à prevista, tornando o cálculo de
+        OTIF sempre 100%, e status_entrega sem relação real com a data).
+        POD ausente em ~7% dos casos, de propósito.
+        """
         registros = []
         for r in remessas:
             pod_confirmado = not com_probabilidade(0.07)
-            status = random.choice(["entregue", "atrasada", "devolvida"])
+
+            sorteio = random.random()
+            if sorteio < 0.05:
+                status = "devolvida"
+                data_entrega_real = r["data_entrega_prevista"] + timedelta(days=random.randint(1, 5))
+            elif sorteio < 0.20:
+                status = "atrasada"
+                data_entrega_real = r["data_entrega_prevista"] + timedelta(days=random.randint(1, 3))
+            else:
+                status = "entregue"
+                data_entrega_real = r["data_entrega_prevista"]
 
             registros.append({
                 "comprovante_id": f"COMP-{r['remessa_id']}",
                 "remessa_id": r["remessa_id"],
-                "data_entrega_real": formatar_data_suja(r["data_entrega_prevista"]),
+                "data_entrega_real": formatar_data_suja(data_entrega_real),
                 "status_entrega": formatar_texto_sujo(status),
                 "pod_confirmado": pod_confirmado if pod_confirmado else valor_nulo_variado(),
             })

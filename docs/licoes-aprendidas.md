@@ -100,3 +100,19 @@ Resultado: `'poc_pulse_observability\xa0'` — um caractere de espaço não sepa
 **Correção:** como o projeto ainda está em fase de desenvolvimento (dado descartável, ADR-010), o caminho foi reset completo — não só das 3 tabelas afetadas, mas de **todas as 11**, porque os simuladores geram os 4 sistemas juntos numa cadeia com dependência real (ADR-011): regenerar só as 3 quebraria a integridade referencial com as outras 8 que dependiam do mesmo lote de geração. Reset de Bronze + Silver + checkpoint + schema do Autoloader, seguido de backfill das datas já testadas via `SimuladorFactory`.
 
 **Lição para o futuro:** corrigir um simulador que já gerou dado em produção (ou em qualquer tabela persistida) não é uma operação isolada — o dado já existente fica **silenciosamente desatualizado** em relação ao código novo, sem erro nenhum até algo tentar usar a coluna que não existe. Duas opções reais para lidar com isso quando acontecer: (1) em fase de desenvolvimento, aceitar o dado como descartável e resetar, como fizemos aqui; (2) em produção real, seria necessário schema evolution explícito (`ALTER TABLE ADD COLUMN`, com a coluna nova vindo `NULL` para o histórico) — opção mais cara de implementar corretamente, mas necessária quando o dado não pode ser descartado. Antes de corrigir um simulador que já gerou dado, perguntar explicitamente: "essa mudança de schema precisa de uma estratégia de migração, ou dá para descartar o que já existe?"
+
+---
+
+## Lição 8 — Dois bugs descobertos só ao calcular a métrica de verdade (Gold)
+
+**O que aconteceu (bug 1):** `gold_otif` saiu como **100%** na primeira tentativa — número bom demais para ser verdade. Investigando, `data_entrega_real` no `SimuladorTMS` era gerada como **exatamente o mesmo valor** de `data_entrega_prevista`, sem nenhuma variação — ou seja, nenhuma entrega jamais poderia atrasar, mesmo por acaso. `status_entrega` também era sorteado de forma **independente** da data, sem relação real entre os dois campos (uma remessa podia estar marcada "atrasada" no texto com data idêntica à prevista).
+
+**Por que isso não apareceu nos testes anteriores:** todos os testes até então validavam *estrutura* (a coluna existe? o tipo está certo? o JOIN funciona?) — nunca a *plausibilidade estatística* do resultado. Um KPI de negócio calculado corretamente sobre uma regra de geração incompleta ainda "funciona" tecnicamente — só o número não significa nada.
+
+**Correção:** `data_entrega_real` passou a variar de propósito (80% no prazo, 15% atrasada 1-3 dias, 5% devolvida), com `status_entrega` derivado da mesma decisão, não sorteado à parte.
+
+**O que aconteceu (bug 2, efeito colateral do bug 1):** ao regenerar os dados para aplicar a correção, `tms_remessas` e `tms_comprovantes_entrega` são geradas **juntas**, na mesma chamada — e como a alocação de rota/veículo é aleatória, a regeneração produziu valores novos também em `tms_remessas` (não só na tabela que pretendíamos corrigir). O Autoloader, com checkpoint intacto para `tms_remessas`, **ignorou** o arquivo novo — a Silver de `tms_remessas` ficou com dado antigo, enquanto `tms_comprovantes_entrega` já tinha o novo. Resultado: 50,4% de "divergência" entre as duas tabelas — número sem significado real, produzido por comparar dado de execuções diferentes como se fossem da mesma.
+
+**Correção:** resetar Bronze/checkpoint de **ambas** as tabelas relacionadas, não só da que motivou a correção original.
+
+**Lição para o futuro (duas, uma de cada bug):** (1) validar não só a estrutura de um KPI calculado, mas se o resultado é **estatisticamente plausível** — um número "bom demais" (100%, 0%, exatamente redondo) é sinal de regra de geração incompleta, não de sorte. (2) Quando uma tabela é regenerada, **todas as tabelas geradas na mesma chamada** (não só a que motivou a mudança) precisam ser tratadas como potencialmente alteradas — reset parcial, olhando só a tabela "culpada", é a fonte mais provável do próximo bug silencioso.

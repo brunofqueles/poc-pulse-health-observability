@@ -1,4 +1,4 @@
-# Arquitetura — Pulse Health Platform (POC)
+    # Arquitetura — Pulse Health Platform (POC)
 
 > Este documento descreve as decisões técnicas de arquitetura da plataforma de observabilidade de pipelines. Contexto de negócio (missões, entidades, regras) vive em `docs/business-context.md`. Decisões pontuais e seus trade-offs detalhados vivem em `docs/adr/`.
 
@@ -113,6 +113,7 @@ Adicionar o 5º pipeline (separar Distribution do ERP) é o teste de que o desen
 - `adr-011-dependencia-geracao-cross-sistema.md` — ordem de execução CRM → ERP → TMS → Financeiro na geração
 - `adr-012-ingestao-autoloader.md` — configuração e convenções da ingestão Landing→Bronze
 - `adr-013-transformacao-bronze-silver.md` — função genérica config-driven, 6 categorias de limpeza
+- `adr-014-gold-negocio-observabilidade.md` — desenho da camada Gold (overwrite, grão por pergunta de negócio)
 
 **Infraestrutura já criada:** catalog `poc_pulse_observability`, os 5 schemas, tags aplicadas, Volume `raw` na Landing Zone.
 
@@ -123,11 +124,14 @@ Adicionar o 5º pipeline (separar Distribution do ERP) é o teste de que o desen
 - `simuladores/simulador_factory.py` — mapeamento sistema → classe e ordem de execução (ADR-011)
 - `orquestracao/gerar_dados.py` — notebook orquestrador de geração, com Widgets (ADR-008)
 - `orquestracao/ingerir_dados.py` — notebook orquestrador de ingestão, as 11 tabelas
+- `orquestracao/promover_seeds.py` — notebook orquestrador dos 6 seeds (Landing → Bronze → Silver)
+- `orquestracao/construir_gold.py` — notebook orquestrador da Gold (KPIs de negócio)
 - `ingestao/ingestor_autoloader.py` — ingestão genérica Landing→Bronze via Autoloader (ADR-012)
 - `transformacao/limpeza_utils.py` — 6 funções puras de limpeza, espelho de `sujeira_intencional.py`
-- `transformacao/configuracao_tabelas.py` — configuração declarativa das 11 tabelas
+- `transformacao/configuracao_tabelas.py` — configuração declarativa das 11 tabelas de evento
 - `transformacao/transformar_bronze_para_silver.py` — função genérica de transformação (ADR-013)
+- `transformacao/configuracao_seeds.py`, `promover_seed.py` — configuração e função genérica dos 6 seeds
 
-**Estado dos dados:** Bronze e Silver completas nas 11 tabelas de evento diário, validadas em 4 dias simulados (03, 07, 08, 10/08/2026), com idempotência confirmada em ingestão e transformação.
+**Estado dos dados:** Bronze e Silver completas nas 17 tabelas (11 de evento diário + 6 seeds). Gold — Fase A (KPIs de negócio) completa: `gold_reconciliacao_financeira`, `gold_otif`, `gold_qualidade_producao`, todas validadas quanto à plausibilidade estatística do resultado, não só execução sem erro.
 
-**Próximo passo real:** transformação Silver → Gold (KPIs de negócio + observabilidade). Depois: Job de limpeza da Landing Zone, Databricks Asset Bundles, alertas reais.
+**Próximo passo real:** Gold — Fase B (observabilidade de qualidade/dados: falha cruzada de cadeia fria, SKU inexistente, estoque negativo) e Fase C (observabilidade de execução: `pipeline_runs`, ainda não gravado em tabela — os orquestradores só imprimem o resultado hoje). Depois: Job de limpeza da Landing Zone, Databricks Asset Bundles, alertas reais.
