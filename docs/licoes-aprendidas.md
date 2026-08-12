@@ -116,3 +116,15 @@ Resultado: `'poc_pulse_observability\xa0'` — um caractere de espaço não sepa
 **Correção:** resetar Bronze/checkpoint de **ambas** as tabelas relacionadas, não só da que motivou a correção original.
 
 **Lição para o futuro (duas, uma de cada bug):** (1) validar não só a estrutura de um KPI calculado, mas se o resultado é **estatisticamente plausível** — um número "bom demais" (100%, 0%, exatamente redondo) é sinal de regra de geração incompleta, não de sorte. (2) Quando uma tabela é regenerada, **todas as tabelas geradas na mesma chamada** (não só a que motivou a mudança) precisam ser tratadas como potencialmente alteradas — reset parcial, olhando só a tabela "culpada", é a fonte mais provável do próximo bug silencioso.
+
+---
+
+## Lição 9 — `JOIN` interno some com linha; em tabela de observabilidade, isso é o pior tipo de erro
+
+**O que aconteceu:** `observability_cadeia_fria` combina 4 tabelas (`tms_remessas`, `erp_notas_expedicao`, `erp_lotes_producao`, `erp_produtos`) usando `JOIN` padrão (interno). Resultado: 115 de 789 remessas (14,6%) sumiram da tabela final, sem erro, sem aviso — porque `lote_id` não resolvia contra a Silver do ERP em parte dos casos (mesma limitação de continuidade já documentada no ADR-010/011).
+
+**Por que isso é mais grave aqui do que em outra tabela qualquer:** o propósito da tabela é *detectar violação*. Uma remessa ausente da tabela final é indistinguível de "verificada, sem problema" — quem consultasse essa tabela concluiria, incorretamente, que não havia risco naquela remessa, quando na verdade ela nunca chegou a ser checada.
+
+**Correção:** trocado para `LEFT JOIN` a partir da tabela âncora (a que deveria cobrir 100% dos casos), com uma categoria explícita (`nao_verificavel`) para linhas que não resolvem a cadeia completa — em vez de omitir, a lacuna de cobertura vira, ela mesma, um dado consultável.
+
+**Lição para o futuro:** `JOIN` interno é a escolha padrão do dia a dia (mais rápido, resultado mais "limpo") — mas numa tabela cujo propósito é *auditar/detectar*, ausência silenciosa de linha é o erro mais perigoso possível, porque se disfarça de "sem problema encontrado". Regra prática: sempre que uma tabela existir para responder "algo deu errado aqui?", usar `LEFT JOIN` a partir da entidade que deveria ter cobertura completa, e tornar "não verificável" uma categoria de resultado tão válida quanto "conforme" ou "violação encontrada" — nunca uma linha que simplesmente não aparece.

@@ -1,4 +1,4 @@
-    # Arquitetura — Pulse Health Platform (POC)
+# Arquitetura — Pulse Health Platform (POC)
 
 > Este documento descreve as decisões técnicas de arquitetura da plataforma de observabilidade de pipelines. Contexto de negócio (missões, entidades, regras) vive em `docs/business-context.md`. Decisões pontuais e seus trade-offs detalhados vivem em `docs/adr/`.
 
@@ -132,6 +132,6 @@ Adicionar o 5º pipeline (separar Distribution do ERP) é o teste de que o desen
 - `transformacao/transformar_bronze_para_silver.py` — função genérica de transformação (ADR-013)
 - `transformacao/configuracao_seeds.py`, `promover_seed.py` — configuração e função genérica dos 6 seeds
 
-**Estado dos dados:** Bronze e Silver completas nas 17 tabelas (11 de evento diário + 6 seeds). Gold — Fase A (KPIs de negócio) completa: `gold_reconciliacao_financeira`, `gold_otif`, `gold_qualidade_producao`, todas validadas quanto à plausibilidade estatística do resultado, não só execução sem erro.
+**Estado dos dados:** Bronze e Silver completas nas 17 tabelas (11 de evento diário + 6 seeds). Gold — Fase A (KPIs de negócio) e Fase B (observabilidade cruzada: `observability_cadeia_fria`, `observability_qualidade_sku`, `observability_estoque_negativo`) completas, todas validadas quanto à plausibilidade estatística do resultado. `observability_cadeia_fria` usa `LEFT JOIN` com categoria explícita "não verificável", nunca `INNER JOIN` (ADR-014, adendo) — princípio válido para qualquer tabela futura de observabilidade cruzada.
 
-**Próximo passo real:** Gold — Fase B (observabilidade de qualidade/dados: falha cruzada de cadeia fria, SKU inexistente, estoque negativo) e Fase C (observabilidade de execução: `pipeline_runs`, ainda não gravado em tabela — os orquestradores só imprimem o resultado hoje). Depois: Job de limpeza da Landing Zone, Databricks Asset Bundles, alertas reais.
+**Próximo passo real:** Gold — Fase C (observabilidade de execução: `pipeline_runs`, ainda não gravado em tabela — os orquestradores só imprimem o resultado hoje, exige voltar em `gerar_dados.py`, `ingerir_dados.py`, `promover_seeds.py`, `construir_gold.py`). Depois: Job de limpeza da Landing Zone, Databricks Asset Bundles, alertas reais.
