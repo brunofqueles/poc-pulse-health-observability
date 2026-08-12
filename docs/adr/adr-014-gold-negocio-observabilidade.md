@@ -1,6 +1,6 @@
 # ADR-014 — Gold: KPIs de negócio e observabilidade
 
-**Status:** Aceito (Fase A concluída; Fases B e C pendentes)
+**Status:** Aceito (Fases A e B concluídas; Fase C pendente)
 
 ## Contexto
 
@@ -39,3 +39,11 @@ Seeds (`erp_produtos`, `tms_veiculos` etc.) nunca tinham passado de Landing Zone
 - Gold sempre reflete o estado mais recente da Silver no momento da execução — não existe risco de Gold "desatualizada" por MERGE mal feito, ao custo de recalcular tudo a cada execução.
 - `gold_qualidade_producao`, sendo agregada, perde a granularidade de lote individual — quem precisar investigar um lote específico reprovado precisa voltar na Silver, não na Gold.
 - Fases B (observabilidade de qualidade/dados) e C (observabilidade de execução, `pipeline_runs`) seguem pendentes — este ADR cobre a decisão de desenho geral da camada, válida para as três fases, não só a primeira.
+
+## Adendo — LEFT JOIN obrigatório em tabela de observabilidade cruzada, nunca INNER JOIN
+
+Ao construir `observability_cadeia_fria` (Fase B), a primeira versão usou `JOIN` interno (padrão) entre as 4 tabelas envolvidas — resultado: 115 de 789 remessas (14,6%) desapareceram silenciosamente da análise, porque seu `lote_id` não resolvia contra `erp_lotes_producao` (limitação de continuidade já conhecida, ADR-010/011). A tabela reportava "sem violação" para remessas que, na verdade, nunca tinham sido checadas.
+
+**Decisão:** toda tabela de observabilidade cruzada usa `LEFT JOIN` a partir da tabela "âncora" (a que teoricamente deveria cobrir 100% dos casos — aqui, `tms_remessas`), nunca `INNER JOIN`. Linhas que não resolvem a cadeia completa recebem uma categoria própria e explícita (`nao_verificavel`), nunca são simplesmente omitidas.
+
+**Por que isso importa mais aqui do que em Gold de negócio:** em `gold_reconciliacao_financeira`/`gold_otif`, uma linha ausente do `JOIN` significa "não faturamos esse pedido ainda" — ausência é informação válida. Numa tabela de observabilidade que existe para *detectar falha*, ausência silenciosa é indistinguível de "verificado, sem problema" — o pior tipo de falso negativo, porque esconde exatamente a lacuna de cobertura que uma plataforma de observabilidade deveria expor.
