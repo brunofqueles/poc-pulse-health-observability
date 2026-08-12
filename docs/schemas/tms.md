@@ -50,6 +50,8 @@
 | `status_entrega` | acentuação/caixa | |
 | `pod_confirmado` | ocasionalmente ausente, de propósito | testa regra de entrega sem comprovante |
 
+**Nota de implementação:** `data_entrega_real` varia deliberadamente em relação à prevista (80% no prazo/"entregue", 15% atrasada 1-3 dias, 5% devolvida) — `status_entrega` é derivado dessa mesma decisão, não sorteado de forma independente. Ver Lição 8, `docs/licoes-aprendidas.md`.
+
 ### ⚠️ Falha cruzada intencional — veículo sem refrigeração transportando produto de cadeia fria
 
 Diferente de toda a sujeira listada acima (contida em uma única tabela/coluna), esta falha só é detectável **cruzando dois sistemas**: `tms_remessas.veiculo_id → tms_veiculos.refrigerado` contra `erp_lotes_producao.produto_id → erp_produtos.exige_cadeia_fria`. O simulador aloca, de propósito e ocasionalmente, uma remessa de Imunorax a um veículo com `refrigerado = false`. Esta verificação pertence à camada de regras de qualidade em Silver/Gold — não é redutível a uma checagem de coluna isolada, e deve ser tratada como caso de teste próprio quando a lógica de qualidade for implementada.
