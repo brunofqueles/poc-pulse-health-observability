@@ -35,3 +35,11 @@ Teste proposto quando chegar a hora: em vez de esperar 30 dias de calendário re
 
 - A Bronze passa a ser, na prática, a única fonte de recuperação de histórico com mais de 30 dias — reforça a importância de o Autoloader nunca falhar silenciosamente entre Landing e Bronze.
 - O Job de limpeza é mais um artefato a versionar via Databricks Asset Bundles (ADR-004), junto com os Jobs diário e mensal.
+
+## Adendo — implementação real
+
+Implementado como `src/manutencao/limpar_landing_zone.py` (função única, parametrizada por sistema — sem OOP, mesmo raciocínio do `IngestorAutoloader`: não há variação de comportamento entre sistemas, só o nome muda) e o orquestrador `src/orquestracao/limpar_landing_zone.py`, com 4 Widgets (`data_referencia`, `dias_retencao`, `dry_run`, `sistema`).
+
+`dry_run` (padrão `"true"`) segue exatamente o teste proposto acima — em vez de esperar 30 dias reais, `data_referencia` é simulada no futuro (ex.: 30/09/2026), fazendo o código "achar" que as partições de teste já venceram. Testado em 2 cenários por sistema (dry_run com data distante identificando partições vencidas sem remover; dry_run com data próxima confirmando que nada é removido antes do prazo) e validado com remoção real (`dry_run=False`) nos 4 sistemas — cada um refletindo corretamente seu próprio calendário de operação (ex.: TMS sem partição de domingo, Financeiro sem partição de sábado).
+
+Detalhe técnico: `dbutils.widgets.get()` sempre devolve string, nunca booleano — a conversão para `dry_run` booleano exige comparação explícita (`== "true"`), não cast direto.
