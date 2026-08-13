@@ -38,3 +38,9 @@ Convenção de pastas: `_autoloader_schema/` e `_autoloader_checkpoint/`, com `_
 - Adicionar ingestão de uma tabela nova (ex.: fase de escala, 5º pipeline) significa só instanciar a classe com novos parâmetros — nenhum código novo.
 - O retorno de `executar()` distingue `"sucesso"` (processou arquivo novo) de `"sem_dado_novo"` (rodou limpo, nada para processar) — decidido pelo número de arquivos processados, não pela presença de `lastProgress`, que o `Trigger.AvailableNow` sempre retorna preenchido mesmo sem dado novo (ver Lição 6, `docs/licoes-aprendidas.md`).
 - Generalizar para as 11 tabelas de evento diário é o próximo passo — o padrão já está provado, não precisa de nova investigação por tabela.
+
+## Adendo — `recentProgress`, não `lastProgress`, para não perder relato de micro-lotes
+
+`query.lastProgress` reflete só o último micro-lote de uma execução do `Trigger.AvailableNow`. Quando o Autoloader divide o processamento em mais de um micro-lote (mesmo dentro de uma única chamada de `.executar()`), o último pode ser um lote de confirmação vazio — fazendo `IngestorAutoloader` reportar `sem_dado_novo` mesmo tendo processado dado real num lote anterior da mesma execução. Diagnosticado via `DESCRIBE HISTORY` da tabela Bronze, confirmando dois registros com o mesmo `queryId` e `epochId` sequencial (ver Lição 10, `docs/licoes-aprendidas.md`).
+
+**Correção:** `executar()` agora itera `query.recentProgress` (todos os micro-lotes da execução) e soma as métricas, em vez de olhar só `lastProgress`. O dado gravado na Bronze nunca esteve incorreto — só o relato de status.

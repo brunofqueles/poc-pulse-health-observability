@@ -68,14 +68,21 @@ class IngestorAutoloader:
         )
         query.awaitTermination()
 
-        progresso = query.lastProgress
-        metricas = progresso["sources"][0]["metrics"] if progresso else {}
-        arquivos_processados = int(metricas.get("numFilesProcessed", 0))
-        linhas_processadas = progresso["sources"][0].get("numInputRows", 0) if progresso else 0
+        # Trigger.AvailableNow pode processar em mais de um micro-lote numa
+        # única execução — query.lastProgress só traz o ÚLTIMO, que pode ser
+        # um lote de confirmação vazio, escondendo que um lote anterior da
+        # MESMA execução já processou dado de verdade. Somar todos os
+        # micro-lotes de query.recentProgress evita esse falso negativo.
+        arquivos_processados = 0
+        linhas_processadas = 0
+        for progresso in query.recentProgress:
+            try:
+                metricas = progresso["sources"][0]["metrics"]
+                arquivos_processados += int(metricas.get("numFilesProcessed", 0))
+                linhas_processadas += progresso["sources"][0].get("numInputRows", 0)
+            except (KeyError, IndexError):
+                continue
 
-        # Trigger.AvailableNow sempre retorna um objeto de progresso, mesmo
-        # sem arquivo novo — o status correto se decide pelo número de
-        # arquivos processados, não pela ausência de `lastProgress`.
         status = "sucesso" if arquivos_processados > 0 else "sem_dado_novo"
 
         return {
