@@ -128,3 +128,15 @@ Resultado: `'poc_pulse_observability\xa0'` — um caractere de espaço não sepa
 **Correção:** trocado para `LEFT JOIN` a partir da tabela âncora (a que deveria cobrir 100% dos casos), com uma categoria explícita (`nao_verificavel`) para linhas que não resolvem a cadeia completa — em vez de omitir, a lacuna de cobertura vira, ela mesma, um dado consultável.
 
 **Lição para o futuro:** `JOIN` interno é a escolha padrão do dia a dia (mais rápido, resultado mais "limpo") — mas numa tabela cujo propósito é *auditar/detectar*, ausência silenciosa de linha é o erro mais perigoso possível, porque se disfarça de "sem problema encontrado". Regra prática: sempre que uma tabela existir para responder "algo deu errado aqui?", usar `LEFT JOIN` a partir da entidade que deveria ter cobertura completa, e tornar "não verificável" uma categoria de resultado tão válida quanto "conforme" ou "violação encontrada" — nunca uma linha que simplesmente não aparece.
+
+---
+
+## Lição 10 — `lastProgress` esconde processamento real quando há múltiplos micro-lotes
+
+**O que aconteceu:** ao integrar `registrar_execucao_pipeline` no `ingerir_dados`, uma tabela (`erp_lotes_producao`) apareceu como `sem_dado_novo` em `pipeline_runs`, mesmo tendo processado 54 linhas de verdade minutos antes. A dúvida inicial foi "o dado se perdeu?" — não: confirmado via `count()` direto na Bronze, as 54 linhas estavam lá. O problema era só no **relato**.
+
+**Diagnóstico, com evidência real (não suposição):** `DESCRIBE HISTORY` na tabela Bronze revelou duas operações consecutivas com o **mesmo `queryId`**, `epochId` 1 e depois 2, um segundo de diferença — prova de que eram dois micro-lotes da **mesma execução** do `Trigger.AvailableNow`, não duas chamadas separadas. `query.lastProgress` só retorna o último micro-lote — que, nesse caso, era um lote de confirmação vazio ("não tem mais nada"), escondendo que o lote anterior, da mesma chamada, já tinha processado o arquivo de verdade.
+
+**Correção:** trocado `query.lastProgress` (um único progresso) por `query.recentProgress` (lista de todos os micro-lotes da execução), somando `numFilesProcessed`/`numInputRows` de todos, não só do último.
+
+**Lição para o futuro:** `Trigger.AvailableNow` não garante processar tudo num único micro-lote — pode dividir internamente. Qualquer código que leia `lastProgress` para decidir "processou algo?" está sujeito a esse falso negativo. `DESCRIBE HISTORY` (ou o equivalente `queryId`/`epochId` em `recentProgress`) é a forma correta de investigar comportamento de streaming que parece inconsistente com o que a tabela realmente contém — mais confiável que reexecutar e torcer para reproduzir.
