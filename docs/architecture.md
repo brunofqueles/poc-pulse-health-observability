@@ -131,7 +131,10 @@ Adicionar o 5º pipeline (separar Distribution do ERP) é o teste de que o desen
 - `transformacao/configuracao_tabelas.py` — configuração declarativa das 11 tabelas de evento
 - `transformacao/transformar_bronze_para_silver.py` — função genérica de transformação (ADR-013)
 - `transformacao/configuracao_seeds.py`, `promover_seed.py` — configuração e função genérica dos 6 seeds
+- `observabilidade/registrar_execucao.py` — registro de execução em `pipeline_runs`, usado pelos orquestradores (ADR-014, Fase C)
+- `manutencao/limpar_landing_zone.py` — remoção de partições vencidas, com modo `dry_run` e `data_referencia` parametrizável para teste (ADR-009)
+- `orquestracao/limpar_landing_zone.py` — 5º notebook orquestrador, com Widget `dry_run` (status dinâmico em `pipeline_runs`: `dry_run` ou `sucesso`, conforme o modo)
 
-**Estado dos dados:** Bronze e Silver completas nas 17 tabelas (11 de evento diário + 6 seeds). Gold — Fase A (KPIs de negócio) e Fase B (observabilidade cruzada: `observability_cadeia_fria`, `observability_qualidade_sku`, `observability_estoque_negativo`) completas, todas validadas quanto à plausibilidade estatística do resultado. `observability_cadeia_fria` usa `LEFT JOIN` com categoria explícita "não verificável", nunca `INNER JOIN` (ADR-014, adendo) — princípio válido para qualquer tabela futura de observabilidade cruzada.
+**Estado dos dados:** Bronze e Silver completas nas 17 tabelas (11 de evento diário + 6 seeds). Gold — Fases A, B e C completas: 3 KPIs de negócio, 3 tabelas de observabilidade cruzada, e `observability.pipeline_runs` registrando cada execução dos 5 orquestradores (append-only). `observability_cadeia_fria` usa `LEFT JOIN` com categoria explícita "não verificável", nunca `INNER JOIN` (ADR-014, adendo). Landing Zone validada e testada com retenção de 30 dias (ERP, CRM, TMS e Financeiro limpos com sucesso nos testes).
 
-**Próximo passo real:** Gold — Fase C (observabilidade de execução: `pipeline_runs`, ainda não gravado em tabela — os orquestradores só imprimem o resultado hoje, exige voltar em `gerar_dados.py`, `ingerir_dados.py`, `promover_seeds.py`, `construir_gold.py`). Depois: Job de limpeza da Landing Zone, Databricks Asset Bundles, alertas reais.
+**Próximo passo real:** Databricks Asset Bundles (ADR-004, transformar os 5 orquestradores em Tasks de um Job real, com dependência explícita — CRM→ERP→TMS→Financeiro na geração, ADR-011). Depois: alertas reais (ADR-007), backfill único (ADR-010).

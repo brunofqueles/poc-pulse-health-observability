@@ -63,7 +63,7 @@ Databricks Free Edition · PySpark · Delta Lake · Unity Catalog · Databricks 
 
 ## Status
 
-Em desenvolvimento — documentação e arquitetura concluídas (contexto de negócio, arquitetura técnica, 14 ADRs, FinOps, schemas detalhados). Código (`src/`): os 4 simuladores completos; Bronze e Silver completas nas 17 tabelas; Gold Fase A (KPIs de negócio) e Fase B (observabilidade cruzada) completas e validadas. Próximo: Gold Fase C (observabilidade de execução).
+Em desenvolvimento — documentação e arquitetura concluídas (contexto de negócio, arquitetura técnica, 14 ADRs, FinOps, schemas detalhados). Código (`src/`): os 4 simuladores completos; Bronze e Silver completas nas 17 tabelas; Gold completa nas 3 fases; Landing Zone com limpeza automatizada e testada (retenção 30 dias, modo dry_run). 5 orquestradores completos e integrados com observabilidade de execução. Próximo: Databricks Asset Bundles.
 
 ## Licença
 
