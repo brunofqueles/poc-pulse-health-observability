@@ -44,3 +44,11 @@ Convenção de pastas: `_autoloader_schema/` e `_autoloader_checkpoint/`, com `_
 `query.lastProgress` reflete só o último micro-lote de uma execução do `Trigger.AvailableNow`. Quando o Autoloader divide o processamento em mais de um micro-lote (mesmo dentro de uma única chamada de `.executar()`), o último pode ser um lote de confirmação vazio — fazendo `IngestorAutoloader` reportar `sem_dado_novo` mesmo tendo processado dado real num lote anterior da mesma execução. Diagnosticado via `DESCRIBE HISTORY` da tabela Bronze, confirmando dois registros com o mesmo `queryId` e `epochId` sequencial (ver Lição 10, `docs/licoes-aprendidas.md`).
 
 **Correção:** `executar()` agora itera `query.recentProgress` (todos os micro-lotes da execução) e soma as métricas, em vez de olhar só `lastProgress`. O dado gravado na Bronze nunca esteve incorreto — só o relato de status.
+
+## Adendo 2 — checkpoint pode referenciar partição já removida manualmente
+
+Ao testar `job_diario` pela primeira vez via Asset Bundles (ADR-004), a Task `ingerir_dados` falhou com `CloudFileNotFoundException: No such file or directory /Volumes/.../erp/data=2026-08-12`. Causa: o checkpoint do Autoloader (que rastreia arquivos já descobertos, não só já processados) mantinha referência a uma partição que havia sido removida manualmente em testes anteriores da função `limpar_landing_zone` (ADR-009) — sem o checkpoint correspondente ter sido resetado junto, mesma classe de problema da Lição 7, só que desencadeada por remoção deliberada de dado (não por evolução de schema).
+
+**Correção adotada:** em vez de tentar remendar o checkpoint específico, executado o backfill completo já planejado (ADR-010) — reset de todas as 17 tabelas e checkpoints, seguido de regeneração de 60 dias de histórico limpo. Resolve a causa raiz (dado de teste inconsistente acumulado) em vez de remendar o sintoma.
+
+**Princípio para o futuro:** qualquer remoção manual de arquivo na Landing Zone — mesmo via a função sancionada `limpar_landing_zone`, não só edição direta — pode deixar o checkpoint de um sistema em estado inconsistente, se esse sistema ainda não tiver processado aquele arquivo. Testes de limpeza devem ser considerados eventos que potencialmente invalidam checkpoints existentes, não operações isoladas e seguras por padrão.

@@ -140,3 +140,21 @@ Resultado: `'poc_pulse_observability\xa0'` — um caractere de espaço não sepa
 **Correção:** trocado `query.lastProgress` (um único progresso) por `query.recentProgress` (lista de todos os micro-lotes da execução), somando `numFilesProcessed`/`numInputRows` de todos, não só do último.
 
 **Lição para o futuro:** `Trigger.AvailableNow` não garante processar tudo num único micro-lote — pode dividir internamente. Qualquer código que leia `lastProgress` para decidir "processou algo?" está sujeito a esse falso negativo. `DESCRIBE HISTORY` (ou o equivalente `queryId`/`epochId` em `recentProgress`) é a forma correta de investigar comportamento de streaming que parece inconsistente com o que a tabela realmente contém — mais confiável que reexecutar e torcer para reproduzir.
+
+---
+
+## Lição 11 — Checkpoint órfão após limpeza manual, e exposição acidental de token
+
+**O que aconteceu (parte 1 — checkpoint):** o primeiro teste real de `job_diario` via Asset Bundles falhou com `CloudFileNotFoundException`, apontando para uma partição da Landing Zone (`erp/data=2026-08-12`) que **não existia mais** — havia sido removida por um teste anterior da função `limpar_landing_zone`. O checkpoint do Autoloader, que rastreia arquivos descobertos (não só processados), ainda "sabia" desse arquivo e tentou lê-lo.
+
+**Por que isso é diferente da Lição 7 (schema desatualizado):** lá, o problema era código de simulador corrigido gerando schema novo sobre dado antigo. Aqui, o dado em si nunca mudou de schema — foi **removido de propósito**, por uma função de manutenção legítima, mas sem coordenar com o estado do checkpoint que ainda o referenciava.
+
+**Correção:** em vez de remendar o checkpoint específico, executado o backfill completo já planejado (ADR-010) — resolve a causa raiz (acúmulo de dado de teste inconsistente) de uma vez, não sintoma por sintoma.
+
+**Lição para o futuro:** testar uma função de limpeza/remoção (mesmo com `dry_run` e toda a validação que já fizemos) não é uma operação isolada quando existe Autoloader com checkpoint rodando sobre os mesmos dados — remover um arquivo que um checkpoint já "viu" mas ainda não processou deixa esse checkpoint em estado inconsistente. Testes de limpeza real, em ambiente com Autoloader ativo, deveriam ser seguidos de verificação (ou reset) de checkpoint, não tratados como isolados só porque a função de limpeza em si foi bem testada.
+
+**O que aconteceu (parte 2 — token exposto):** durante a configuração do Databricks CLI, um comando de verificação (`cat ~/.databrickscfg`) foi rodado e capturado em print para compartilhar — expondo o token de autenticação em texto puro.
+
+**Correção:** token revogado imediatamente e substituído por um novo, com escopo granular (`bundle`, `bundle-deployments`, `jobs`, `workspace`) em vez do escopo total inicialmente sugerido.
+
+**Lição para o futuro:** ao verificar se uma credencial foi configurada corretamente, usar sempre um comando que **confirma sem exibir** o segredo (ex.: `databricks current-user me`, que retorna dados de usuário sem nunca mostrar o token) — nunca `cat`/`print` direto num arquivo de configuração que guarda segredo em texto puro, mesmo em ambiente de baixo risco. A prática correta diante de qualquer exposição acidental, por menor que pareça, é tratar a credencial como comprometida e substituí-la — não avaliar se "alguém provavelmente não vai usar".

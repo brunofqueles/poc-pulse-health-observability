@@ -1,0 +1,36 @@
+resources:
+  jobs:
+    job_diario:
+      name: "Pulse - Job Diario"
+      tags:
+        ambiente: "poc"
+        projeto: "pulse-health-observability"
+        dominio: "life-sciences"
+      tasks:
+        - task_key: gerar_dados
+          notebook_task:
+            notebook_path: ../src/orquestracao/gerar_dados.ipynb
+            base_parameters:
+              sistema: "todos"
+              modo_execucao: "agendado"
+        - task_key: ingerir_dados
+          depends_on:
+            - task_key: gerar_dados
+          notebook_task:
+            notebook_path: ../src/orquestracao/ingerir_dados.ipynb
+            base_parameters:
+              sistema: "todos"
+        - task_key: promover_seeds
+          depends_on:
+            - task_key: ingerir_dados
+          notebook_task:
+            notebook_path: ../src/orquestracao/promover_seeds.ipynb
+        - task_key: construir_gold
+          depends_on:
+            - task_key: promover_seeds
+          notebook_task:
+            notebook_path: ../src/orquestracao/construir_gold.ipynb
+      schedule:
+        quartz_cron_expression: "0 0 6 * * ?"
+        timezone_id: "America/Sao_Paulo"
+        pause_status: PAUSED

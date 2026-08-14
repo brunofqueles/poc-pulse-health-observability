@@ -135,6 +135,8 @@ Adicionar o 5º pipeline (separar Distribution do ERP) é o teste de que o desen
 - `manutencao/limpar_landing_zone.py` — remoção de partições vencidas, com modo `dry_run` e `data_referencia` parametrizável para teste (ADR-009)
 - `orquestracao/limpar_landing_zone.py` — 5º notebook orquestrador, com Widget `dry_run` (status dinâmico em `pipeline_runs`: `dry_run` ou `sucesso`, conforme o modo)
 
-**Estado dos dados:** Bronze e Silver completas nas 17 tabelas (11 de evento diário + 6 seeds). Gold — Fases A, B e C completas: 3 KPIs de negócio, 3 tabelas de observabilidade cruzada, e `observability.pipeline_runs` registrando cada execução dos 5 orquestradores (append-only). `observability_cadeia_fria` usa `LEFT JOIN` com categoria explícita "não verificável", nunca `INNER JOIN` (ADR-014, adendo). Landing Zone validada e testada com retenção de 30 dias (ERP, CRM, TMS e Financeiro limpos com sucesso nos testes).
+**Infraestrutura como código:** `databricks.yml` + `resources/` (2 Jobs: `job_diario` com 4 Tasks dependentes, `job_manutencao` com 1 Task, ambos pausados por segurança — `pause_status: PAUSED`). Testado via CLI: `validate`, `deploy`, `run` — as 4 Tasks do Job diário executando com sucesso via Databricks Workflows real, não mais só notebooks manuais.
 
-**Próximo passo real:** Databricks Asset Bundles (ADR-004, transformar os 5 orquestradores em Tasks de um Job real, com dependência explícita — CRM→ERP→TMS→Financeiro na geração, ADR-011). Depois: alertas reais (ADR-007), backfill único (ADR-010).
+**Estado dos dados:** Bronze e Silver completas nas 17 tabelas. Gold completa nas 3 fases. Histórico real: **backfill de 60 dias** (16/06 a 14/08/2026) executado e validado matematicamente contra o calendário de cada sistema — 44 dias úteis (Manufacturing/Financeiro), 52 dias (Distribution/TMS), 60 dias (Commercial). `observability_cadeia_fria` usa `LEFT JOIN` com categoria explícita "não verificável", nunca `INNER JOIN` (ADR-014, adendo).
+
+**Próximo passo real:** alertas reais (ADR-007). Depois: AI/BI Dashboards + Genie, testes automatizados.

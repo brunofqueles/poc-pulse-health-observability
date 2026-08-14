@@ -1,0 +1,20 @@
+resources:
+  jobs:
+    job_manutencao:
+      name: "Pulse - Job Manutencao"
+      tags:
+        ambiente: "poc"
+        projeto: "pulse-health-observability"
+        dominio: "life-sciences"
+      tasks:
+        - task_key: limpar_landing_zone
+          notebook_task:
+            notebook_path: ../src/orquestracao/limpar_landing_zone.ipynb
+            base_parameters:
+              sistema: "todos"
+              dias_retencao: "30"
+              dry_run: "true"
+      schedule:
+        quartz_cron_expression: "0 0 7 ? * MON"
+        timezone_id: "America/Sao_Paulo"
+        pause_status: PAUSED
