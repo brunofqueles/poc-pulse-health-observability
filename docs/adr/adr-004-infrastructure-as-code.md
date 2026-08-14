@@ -39,3 +39,30 @@ Um único target de deployment (`dev`) é definido — não existem ambientes `s
 - Qualquer mudança nos Jobs (novo pipeline na fase de escala, ajuste de schedule) passa a ser uma mudança de código revisável via Pull Request — não um clique na UI sem histórico.
 - A ausência de múltiplos ambientes fica documentada como limitação de plataforma, não como lacuna de maturidade de IaC.
 - Autenticação via Personal Access Token (não service principal) é uma limitação a mencionar com transparência caso o projeto seja avaliado por alguém familiarizado com ambientes corporativos reais, onde essa distinção importa.
+
+## Adendo — implementação real e decisões confirmadas
+
+**Estrutura real**, ligeiramente diferente da planejada (2 Jobs, não 3 — o mensal não foi implementado, já que `financeiro_fechamento_mensal` nunca foi codado):
+
+```
+databricks.yml
+resources/
+  job_diario.yml       (4 Tasks: gerar_dados → ingerir_dados → promover_seeds → construir_gold)
+  job_manutencao.yml   (1 Task: limpar_landing_zone, agendado semanal)
+```
+
+**Web Terminal**: confirmado disponível na Free Edition, mas exige compute serverless "acordado" primeiro — a primeira tentativa retornou "Web terminal is only available on running compute"; rodar qualquer célula no notebook antes resolveu.
+
+**Databricks CLI**: já vem pré-instalado no Web Terminal (v1.12.1 confirmado) — nenhuma instalação manual necessária.
+
+**Personal Access Token — escopo granular, não `all-apis`**: a Free Edition oferece seleção de escopos específicos na criação do token (recurso mais novo que o esperado). Escolhidos `bundle`, `bundle-deployments`, `jobs`, `workspace` — suficientes para `validate`/`deploy`/`run`, sem precisar do escopo total "not recommended". Um token foi exposto acidentalmente durante os testes (apareceu em texto puro num `cat ~/.databrickscfg` capturado em print) — revogado e substituído; lição registrada abaixo. Comando de verificação recomendado dali em diante: `databricks current-user me` (confirma autenticação sem nunca exibir o token), não `cat` no arquivo de config.
+
+**`mode: development`, mantido conscientemente**: gera o prefixo `[dev nome_usuario]` nos Jobs e ativa *source-linked deployment* — os Jobs implantados referenciam os notebooks do workspace diretamente, sem exigir `deploy` a cada edição. Migrar para `mode: production` removeria o prefixo, mas trocaria para paths fixos exigindo redeploy manual a cada mudança de notebook — voltaria a expor o mesmo risco de dessincronia já visto na Lição 7. Migração para `production` fica para quando o projeto estiver pronto para rodar sem supervisão constante, não agora.
+
+**`pause_status: PAUSED` nos dois Jobs**: nenhum agendamento roda sozinho até ativação manual e consciente — mesmo princípio do `dry_run` do `job_manutencao`, camada dupla de segurança.
+
+**Tags nos Jobs**: reaproveitada a mesma convenção já usada no Unity Catalog (`ambiente`, `dominio`, `projeto`) — consistência entre as duas camadas de governança do projeto.
+
+**Testado com sucesso**: `databricks bundle validate` (sintaxe), `databricks bundle deploy` (criação real dos 2 Jobs), `databricks bundle run job_diario` (execução real das 4 Tasks, ~3 minutos, todas com sucesso — após o backfill completo descrito no ADR-010, adendo).
+
+**Incidente encontrado e não escondido**: a primeira tentativa de `bundle run job_diario` falhou com `CloudFileNotFoundException` — detalhado no ADR-012 (adendo) e na Lição 11, `docs/licoes-aprendidas.md`.

@@ -46,3 +46,17 @@ Um único Workflow agendado (ADR-006), sem nenhum job auxiliar ou temporário co
 - Nenhum dado gerado durante a fase de desenvolvimento precisa ser preservado ou tratado como confiável — simplifica testes e depuração.
 - O backfill único é o primeiro uso real do Widget de reprocessamento em escala (múltiplos dias de uma vez), servindo também como teste de carga leve do mecanismo antes da produção.
 - A regra "nunca dois processos concorrentes sobre o mesmo destino" vale tanto para Jobs do Databricks Workflows quanto para qualquer execução manual paralela (ex.: duas pessoas, ou você em duas abas, rodando o mesmo notebook ao mesmo tempo) — vale como princípio geral do projeto, não só para jobs agendados.
+
+## Adendo — backfill executado
+
+Motivado por um incidente real (checkpoint referenciando partição removida, ver ADR-012, adendo 2), o backfill único foi executado: reset completo das 17 tabelas + `pipeline_runs` + Landing Zone + checkpoints, seguido de geração de **60 dias** (16/06/2026 a 14/08/2026).
+
+**Método de estimativa antes de escalar:** medição de 1 dia útil completo (13,8 segundos), extrapolada linearmente para 60 dias (~14 minutos estimados) — tecnicamente um *smoke test de performance com extrapolação linear*, não um benchmark rigoroso (uma única amostra, sem repetição). Suficiente para decidir viabilidade, insuficiente para prometer tempo de execução garantido.
+
+**Achado durante a estimativa:** a primeira medição usou um domingo por acidente, retornando 4,1 segundos — muito mais rápido que o real, porque só o CRM opera aos domingos (os outros 3 sistemas geraram apenas seed, sem evento). Extrapolação a partir de um dia não-representativo teria subestimado o tempo real em mais de 3x. Corrigido medindo um dia útil completo antes de decidir.
+
+**Resultado real:** 60 dias processados em **10,9 minutos** — próximo da estimativa, mesmo com a mistura real de dias úteis e fins de semana ao longo do período (mais leve que o pior caso usado como base).
+
+**Validação matemática das contagens**, não apenas "rodou sem erro": o número de arquivos ingeridos por tabela foi conferido contra o cálculo exato de dias por calendário no período (Seg-Sex, Seg-Sáb, todos os dias) — bateu exatamente (44/52/60/44), confirmando que o calendário de cada sistema é respeitado com precisão em escala, não só nos poucos dias testados manualmente antes.
+
+Após o backfill, `databricks bundle run job_diario` foi reexecutado com sucesso — confirmando que o incidente original tinha causa raiz no dado de teste acumulado, não em código.
