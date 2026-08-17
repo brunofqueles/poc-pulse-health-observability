@@ -158,3 +158,15 @@ Resultado: `'poc_pulse_observability\xa0'` — um caractere de espaço não sepa
 **Correção:** token revogado imediatamente e substituído por um novo, com escopo granular (`bundle`, `bundle-deployments`, `jobs`, `workspace`) em vez do escopo total inicialmente sugerido.
 
 **Lição para o futuro:** ao verificar se uma credencial foi configurada corretamente, usar sempre um comando que **confirma sem exibir** o segredo (ex.: `databricks current-user me`, que retorna dados de usuário sem nunca mostrar o token) — nunca `cat`/`print` direto num arquivo de configuração que guarda segredo em texto puro, mesmo em ambiente de baixo risco. A prática correta diante de qualquer exposição acidental, por menor que pareça, é tratar a credencial como comprometida e substituí-la — não avaliar se "alguém provavelmente não vai usar".
+
+---
+
+## Lição 12 — Interface muda mais rápido que roteiro fixo; confirmar a tela real antes de seguir passo a passo
+
+**O que aconteceu:** o primeiro passo a passo para criar um painel no AI/BI Dashboard (baseado em documentação/conhecimento geral da ferramenta) assumia um fluxo de "colar SQL direto no editor do painel". A tela real mostrava uma interface diferente e mais nova — assistida por IA ("Ask the assistant to edit this chart..."), com abas separadas de "Data" (onde datasets SQL são definidos) e a página do dashboard (onde visualizações são configuradas), sem o caminho direto assumido inicialmente.
+
+**Por que isso não é um erro no sentido dos anteriores:** não houve dado incorreto nem bug de código — foi um roteiro de instrução desatualizado em relação à interface real, corrigido assim que a tela real foi mostrada.
+
+**Correção:** abandonado o roteiro genérico assumido; seguido o caminho real da tela (aba Data → Add SQL dataset → voltar para a página → adicionar visualização referenciando o dataset).
+
+**Lição para o futuro:** para qualquer ferramenta de interface visual (diferente de código, que é determinístico), pedir confirmação da tela real antes de continuar um roteiro pré-planejado — interfaces desse tipo mudam com frequência maior do que documentação/conhecimento geral consegue acompanhar. Um print da tela real vale mais que um roteiro assumido, mesmo quando o roteiro parece razoável.

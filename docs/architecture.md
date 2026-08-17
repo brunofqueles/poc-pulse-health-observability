@@ -132,11 +132,14 @@ Adicionar o 5º pipeline (separar Distribution do ERP) é o teste de que o desen
 - `transformacao/transformar_bronze_para_silver.py` — função genérica de transformação (ADR-013)
 - `transformacao/configuracao_seeds.py`, `promover_seed.py` — configuração e função genérica dos 6 seeds
 - `observabilidade/registrar_execucao.py` — registro de execução em `pipeline_runs`, usado pelos orquestradores (ADR-014, Fase C)
+- `observabilidade/notificadores.py` — `NotificadorBase`, `NotificadorTabela` (ADR-007)
 - `manutencao/limpar_landing_zone.py` — remoção de partições vencidas, com modo `dry_run` e `data_referencia` parametrizável para teste (ADR-009)
 - `orquestracao/limpar_landing_zone.py` — 5º notebook orquestrador, com Widget `dry_run` (status dinâmico em `pipeline_runs`: `dry_run` ou `sucesso`, conforme o modo)
 
-**Infraestrutura como código:** `databricks.yml` + `resources/` (2 Jobs: `job_diario` com 4 Tasks dependentes, `job_manutencao` com 1 Task, ambos pausados por segurança — `pause_status: PAUSED`). Testado via CLI: `validate`, `deploy`, `run` — as 4 Tasks do Job diário executando com sucesso via Databricks Workflows real, não mais só notebooks manuais.
+**Infraestrutura como código:** `databricks.yml` + `resources/` (2 Jobs: `job_diario` com 4 Tasks dependentes e Job Notifications configurado (falha + duração), `job_manutencao` com 1 Task, ambos pausados por segurança — `pause_status: PAUSED`). Testado via CLI: `validate`, `deploy`, `run` — as 4 Tasks do Job diário executando com sucesso via Databricks Workflows real, e email de notificação recebido de verdade em teste.
 
 **Estado dos dados:** Bronze e Silver completas nas 17 tabelas. Gold completa nas 3 fases. Histórico real: **backfill de 60 dias** (16/06 a 14/08/2026) executado e validado matematicamente contra o calendário de cada sistema — 44 dias úteis (Manufacturing/Financeiro), 52 dias (Distribution/TMS), 60 dias (Commercial). `observability_cadeia_fria` usa `LEFT JOIN` com categoria explícita "não verificável", nunca `INNER JOIN` (ADR-014, adendo).
 
-**Próximo passo real:** alertas reais (ADR-007). Depois: AI/BI Dashboards + Genie, testes automatizados.
+**Alertas e visualização:** `NotificadorBase`/`NotificadorTabela` (ADR-007) testados com dado real (520 violações de `veiculo_incorreto` do backfill). `NotificadorEmail` desenhado como interface, não implementado (decisão de limite pessoal, não técnica — ver ADR-007, adendo). Primeiro AI/BI Dashboard (`Pulse - Observabilidade`, ADR-015) publicado, com 3 painéis sobre `observability.alertas`, `observability_cadeia_fria` e `pipeline_runs` — as decisões de permissão de publicação são aplicação direta da governança já documentada no ADR-005.
+
+**Próximo passo real:** Genie (configuração de linguagem natural sobre as tabelas de observabilidade). Depois: testes automatizados.

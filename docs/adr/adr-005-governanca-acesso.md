@@ -65,3 +65,9 @@ Testada a tela de criação de policy (`Grant access`) no schema `gold`. Descobe
 - O modelo de RBAC fica documentado como especificação, não como configuração ativa — deixado explícito no repositório para não passar a impressão de governança implementada que não existe.
 - Tags são o único mecanismo de governança real e demonstrável neste ambiente, usado tanto para descoberta quanto como base para relatórios de governança.
 - Nenhum código de mascaramento/row-filter é escrito, evitando construir uma feature de governança atrás de tecnologia disponível sem requisito de negócio real por trás.
+
+## Adendo — aplicação prática na publicação do AI/BI Dashboard
+
+Ao publicar o primeiro AI/BI Dashboard (`ADR-015`), duas decisões de permissão reaplicaram diretamente as conclusões deste ADR, não como coincidência: **"Shared data permission"** (não "Individual") foi escolha **obrigatória**, não preferência — "Individual" exigiria que cada visualizador tivesse `GRANT` próprio nas tabelas, e este ADR já havia provado, com evidência de erro real (`PRINCIPAL_DOES_NOT_EXIST`), que isso não é possível no Free Edition. **Gerenciamento restrito a "Admins"** (não "All Workspace Users") seguiu o mesmo princípio de menor privilégio já aplicado ao desenho de RBAC, mesmo sem efeito prático diferente no ambiente mono-usuário atual.
+
+Reforça o valor de ADRs anteriores bem documentados: a decisão já estava tomada e justificada antes mesmo de a pergunta aparecer numa tela nova — não foi preciso reabrir a discussão do zero.

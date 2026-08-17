@@ -48,6 +48,7 @@ Cada decisão de arquitetura relevante está documentada com contexto, alternati
 | [012](docs/adr/adr-012-ingestao-autoloader.md) | Ingestão Landing Zone → Bronze via Autoloader |
 | [013](docs/adr/adr-013-transformacao-bronze-silver.md) | Transformação Bronze → Silver (função genérica config-driven) |
 | [014](docs/adr/adr-014-gold-negocio-observabilidade.md) | Gold: KPIs de negócio e observabilidade |
+| [015](docs/adr/adr-015-aibi-dashboard.md) | AI/BI Dashboard: camada de consumo visual |
 
 ## Lições aprendidas
 
@@ -63,7 +64,7 @@ Databricks Free Edition · PySpark · Delta Lake · Unity Catalog · Databricks 
 
 ## Status
 
-Em desenvolvimento — documentação e arquitetura concluídas (contexto de negócio, arquitetura técnica, 14 ADRs, FinOps, schemas detalhados). Código (`src/`): os 4 simuladores completos; Bronze, Silver e Gold completas; 5 orquestradores integrados com observabilidade de execução. Infraestrutura como código implementada (Databricks Asset Bundles — 2 Jobs reais, testados via `deploy` e `run`). Histórico real: backfill de 60 dias executado e validado. Próximo: alertas reais.
+Em desenvolvimento — documentação e arquitetura concluídas (contexto de negócio, arquitetura técnica, 15 ADRs, FinOps, schemas detalhados). Código (`src/`): os 4 simuladores completos; Bronze, Silver e Gold completas; 5 orquestradores integrados; Infrastructure as Code implementada (2 Jobs reais). Alertas reais testados (Job Notifications + NotificadorTabela, 520 violações reais processadas) e primeiro AI/BI Dashboard publicado. Próximo: Genie.
 
 ## Licença
 
