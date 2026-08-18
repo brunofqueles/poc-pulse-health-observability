@@ -6,6 +6,18 @@ resources:
         ambiente: "poc"
         projeto: "pulse-health-observability"
         dominio: "life-sciences"
+      email_notifications:
+        on_failure:
+          - bruno.quelestech@outlook.com
+          - data-eng-alerts@empresa-fake.com
+        on_duration_warning_threshold_exceeded:
+          - bruno.quelestech@outlook.com
+          - data-eng-alerts@empresa-fake.com
+      health:
+        rules:
+          - metric: RUN_DURATION_SECONDS
+            op: GREATER_THAN
+            value: 900
       tasks:
         - task_key: gerar_dados
           notebook_task:
