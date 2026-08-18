@@ -64,7 +64,7 @@ Databricks Free Edition · PySpark · Delta Lake · Unity Catalog · Databricks 
 
 ## Status
 
-Em desenvolvimento — documentação e arquitetura concluídas (contexto de negócio, arquitetura técnica, 15 ADRs, FinOps, schemas detalhados). Código (`src/`): os 4 simuladores completos; Bronze, Silver e Gold completas; 5 orquestradores integrados; Infrastructure as Code implementada (2 Jobs reais). Alertas reais testados (Job Notifications + NotificadorTabela, 520 violações reais processadas) e primeiro AI/BI Dashboard publicado. Próximo: Genie.
+Em desenvolvimento — documentação e arquitetura concluídas (contexto de negócio, arquitetura técnica, 15 ADRs, FinOps, schemas detalhados). Código (`src/`): os 4 simuladores completos; Bronze, Silver e Gold completas; 5 orquestradores integrados; Infrastructure as Code implementada (2 Jobs reais). Alertas reais testados, AI/BI Dashboard publicado, Genie Agent validado com 3 perguntas em linguagem natural. Próximo e último item do roadmap principal: testes automatizados.
 
 ## Licença
 
