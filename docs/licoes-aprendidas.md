@@ -170,3 +170,15 @@ Resultado: `'poc_pulse_observability\xa0'` — um caractere de espaço não sepa
 **Correção:** abandonado o roteiro genérico assumido; seguido o caminho real da tela (aba Data → Add SQL dataset → voltar para a página → adicionar visualização referenciando o dataset).
 
 **Lição para o futuro:** para qualquer ferramenta de interface visual (diferente de código, que é determinístico), pedir confirmação da tela real antes de continuar um roteiro pré-planejado — interfaces desse tipo mudam com frequência maior do que documentação/conhecimento geral consegue acompanhar. Um print da tela real vale mais que um roteiro assumido, mesmo quando o roteiro parece razoável.
+
+---
+
+## Lição 13 — Verificar o estado real de configuração antes de levantar hipótese de falha
+
+**O que aconteceu:** ao ver o Genie responder corretamente uma pergunta de faturamento (dado de `gold_reconciliacao_financeira`), foi levantada a hipótese de que ele tinha acessado uma tabela fora do escopo configurado — baseada na lembrança de que só as 5 tabelas de `observability` teriam sido conectadas. A lembrança estava errada: as 3 tabelas Gold também haviam sido conectadas, na mesma etapa inicial de configuração, só não registrado corretamente na documentação no momento.
+
+**Por que isso quase virou uma conclusão errada, documentada como fato:** a hipótese foi reforçada por uma busca que trouxe uma fonte real (blog de terceiros) descrevendo um comportamento plausível e tecnicamente coerente ("Genie pode alcançar tabelas fora do Space via edição manual de query") — fácil de aceitar como confirmação, porque parecia se encaixar perfeitamente no caso observado.
+
+**Correção:** antes de documentar a hipótese como conclusão, foi pedida confirmação direta da lista real de tabelas conectadas (não memória da conversa) e um teste específico desenhado para diferenciar as duas hipóteses (pergunta sobre `crm_clientes`, tabela genuinamente fora do escopo) — o resultado confirmou que o escopo era respeitado, refutando a hipótese antes de ela virar documentação permanente e incorreta.
+
+**Lição para o futuro:** quando uma observação parece confirmar uma hipótese plausível e apoiada por fonte externa, ainda vale desenhar um teste que **poderia refutar** a hipótese antes de aceitá-la — especialmente antes de registrar algo como fato em documentação. Memória de configuração feita em mensagens anteriores da conversa não substitui verificação do estado atual real, principalmente quando a config foi feita por cliques na interface (não código versionado, que ficaria explícito no diff de um commit).
