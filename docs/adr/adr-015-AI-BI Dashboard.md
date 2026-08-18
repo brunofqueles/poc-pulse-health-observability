@@ -1,6 +1,6 @@
 # ADR-015 — AI/BI Dashboard: camada de consumo visual
 
-**Status:** Aceito (Dashboard implementado; Genie pendente)
+**Status:** Aceito (Dashboard e Genie implementados)
 
 ## Contexto
 
@@ -34,4 +34,15 @@ Um AI/BI Dashboard (`Pulse - Observabilidade`), com 3 painéis, cada um com desc
 
 - O dashboard depende do mesmo SQL Warehouse único (2X-Small) da Free Edition (`architecture.md`, seção de limitações) — não testado sob múltiplos usuários simultâneos, irrelevante no contexto mono-usuário atual.
 - Refresh do dashboard é manual nesta fase (não configuramos agendamento automático) — item a revisitar se o projeto migrar para `mode: production`.
-- **Genie não foi configurado nesta fase** — decisão deliberada de sequenciamento: validar a base de dashboard fixo primeiro (queries já conhecidas e corretas), antes de configurar a camada de linguagem natural, que exige contexto adicional (Genie Space apontando para as tabelas, com descrição de colunas) para interpretar perguntas corretamente.
+- **Genie implementado nesta fase** — ver adendo abaixo.
+
+## Adendo — Genie Agent implementado e validado
+
+Criado `Pulse - Observabilidade` (Genie Agent), com escopo **maior que o inicialmente planejado**: durante a configuração, decidido incluir as 5 tabelas do schema `observability` (`alertas`, `pipeline_runs`, `observability_cadeia_fria`, `observability_qualidade_sku`, `observability_estoque_negativo`), não só as 3 originalmente cogitadas — todas do mesmo schema e granularidade, sem motivo real para excluir as 2 restantes. Schema `gold` (KPIs de negócio) deixado de fora deliberadamente, por ser domínio de pergunta diferente ("quanto faturei" vs. "o que está com problema") — expansão futura, não urgente.
+
+**Camadas excluídas por desenho, não esquecimento:** `bronze`/`silver`/`landing` nunca entraram no escopo — Bronze é 100% string sem tratamento (ADR-001), inadequado para interpretação de linguagem natural.
+
+**Validado com 3 perguntas em complexidade crescente, cada uma conferida contra número já conhecido do projeto:**
+1. "Quantos alertas existem registrados?" → 2 (correto — teste fabricado + as 520 violações reais)
+2. "Quantas remessas têm o tipo de violação veículo incorreto?" → 520 (correto, já validado manualmente várias vezes)
+3. "Quantas execuções cada pipeline teve, agrupado por status?" → agregação correta em duas dimensões (`pipeline`, `status`), incluindo um caso não-óbvio: `ingerir_dados` com as 11 tabelas em "sem_dado_novo" — corretamente refletindo que o Autoloader rastreia arquivo por *caminho*, não por *conteúdo* (mesmo princípio já documentado no ADR-012), então reexecutar `gerar_dados` sobrescrevendo o arquivo do mesmo dia não gera reprocessamento. Não é bug — é o comportamento correto e esperado, e o Genie interpretou/relatou isso com precisão.
