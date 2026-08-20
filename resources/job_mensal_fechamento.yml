@@ -1,0 +1,22 @@
+resources:
+  jobs:
+    job_mensal_fechamento:
+      name: "Pulse - Job Mensal Fechamento"
+      tags:
+        ambiente: "poc"
+        projeto: "pulse-health-observability"
+        dominio: "life-sciences"
+      email_notifications:
+        on_failure:
+          - bruno.quelestech@outlook.com
+          - data-eng-alerts@empresa-fake.com
+      tasks:
+        - task_key: fechar_mes
+          notebook_task:
+            notebook_path: ../src/orquestracao/fechar_mes.ipynb
+            base_parameters:
+              data_execucao: "{{job.start_time.iso_date}}"
+      schedule:
+        quartz_cron_expression: "0 0 6 1 * ?"
+        timezone_id: "America/Sao_Paulo"
+        pause_status: PAUSED

@@ -48,3 +48,7 @@ O Job Mensal usa `pipeline_runs` como pré-condição de execução — a plataf
 - Falha em uma Task (ex.: Ingestão TMS) impede a execução das Tasks dependentes downstream (Transformação Financeiro), evitando reconciliação com dado incompleto.
 - O Job Mensal depende de dado de observabilidade estar correto e completo — reforça a necessidade de a Task de log rodar mesmo quando outras falham.
 - Respeita o limite de 5 tasks concorrentes da Free Edition — o desenho já assume execução em cadeia parcial, não paralelismo pleno dos 4 pipelines.
+
+## Adendo — Job Mensal implementado
+
+Implementado como `job_mensal_fechamento` (Job próprio, não Task dentro de outro Job), com a validação de completude via `pipeline_runs` funcionando exatamente como previsto aqui. Detalhes de implementação (descoberta de lacuna em `pipeline_runs`, cálculo automático de "mês anterior", alerta condicional): `docs/adr/adr-016-fechamento-mensal.md`.

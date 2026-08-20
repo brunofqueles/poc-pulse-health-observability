@@ -182,3 +182,33 @@ Resultado: `'poc_pulse_observability\xa0'` — um caractere de espaço não sepa
 **Correção:** antes de documentar a hipótese como conclusão, foi pedida confirmação direta da lista real de tabelas conectadas (não memória da conversa) e um teste específico desenhado para diferenciar as duas hipóteses (pergunta sobre `crm_clientes`, tabela genuinamente fora do escopo) — o resultado confirmou que o escopo era respeitado, refutando a hipótese antes de ela virar documentação permanente e incorreta.
 
 **Lição para o futuro:** quando uma observação parece confirmar uma hipótese plausível e apoiada por fonte externa, ainda vale desenhar um teste que **poderia refutar** a hipótese antes de aceitá-la — especialmente antes de registrar algo como fato em documentação. Memória de configuração feita em mensagens anteriores da conversa não substitui verificação do estado atual real, principalmente quando a config foi feita por cliques na interface (não código versionado, que ficaria explícito no diff de um commit).
+
+---
+
+## Lição 14 — Duas particularidades do Web Terminal para rodar pytest
+
+**O que aconteceu (parte 1):** `pip install pytest` completou com sucesso (confirmado via `pip show pytest`), mas o comando `pytest` retornou "command not found" no terminal.
+
+**Causa:** o executável instalado não está no `PATH` do Web Terminal, mesmo o pacote Python existindo corretamente.
+**Correção:** chamar via `python -m pytest`, que sempre funciona quando o pacote está instalado, independente do `PATH` do executável.
+
+**O que aconteceu (parte 2):** com `python -m pytest tests/ -v`, apareceu `OSError: [Errno 95] Operation not supported` ao tentar criar `tests/__pycache__`.
+
+**Causa:** `/Workspace` é um sistema de arquivos virtual do Databricks, não um disco comum — não suporta todas as operações de sistema de arquivos que o pytest tenta usar por padrão (cache de bytecode compilado).
+**Correção:** `PYTHONDONTWRITEBYTECODE=1 python -m pytest tests/ -v` — desabilita a escrita de cache, sem afetar a execução dos testes em si.
+
+**Lição para o futuro:** ferramentas de linha de comando padrão do ecossistema Python (pytest, mas potencialmente outras) podem ter comportamento diferente rodando dentro do Web Terminal do Databricks, por causa do sistema de arquivos `/Workspace` não ser um disco POSIX completo. Ao rodar qualquer ferramenta nova nesse terminal pela primeira vez, tratar erros de I/O (`OSError`, permissão, `command not found`) como possivelmente específicos do ambiente, não do código — a mesma cautela já aplicada a Autoloader, Asset Bundles e Secret Scopes.
+
+---
+
+## Lição 15 — Dado existir não é o mesmo que dado ter prova de execução
+
+**O que aconteceu:** ao testar `fechar_mes.ipynb` (que valida completude consultando `pipeline_runs` antes de aceitar um fechamento) contra julho — mês que sabíamos, com certeza, estar completo — a validação retornou `fechamento_valido = false`, com todos os 23 dias úteis "faltando".
+
+**Causa raiz:** `backfill_completo.ipynb` gerou o dado real de julho chamando `SimuladorFactory` diretamente, num loop manual, sem nunca passar pelo orquestrador oficial (`gerar_dados.ipynb`) — o único ponto do código que registra em `pipeline_runs`. O dado existia de verdade, validado matematicamente em fases anteriores; a prova de execução registrada, não.
+
+**Por que isso não foi um bug de `fechar_mes`, e sim uma descoberta válida:** o comportamento era exatamente o desenhado — não confiar apenas na existência do dado, exigir prova de execução. A "falha" no teste era, na verdade, o mecanismo de validação funcionando corretamente e expondo uma lacuna real de rastreabilidade que já existia, silenciosa, desde o backfill.
+
+**Correção:** reconstrução retroativa de `pipeline_runs` (240 registros), baseada em evidência já conhecida (log de execução do backfill original + checagem de calendário), marcada explicitamente como `reconstrucao_retroativa: True` — nunca disfarçada de execução em tempo real.
+
+**Lição para o futuro:** qualquer atalho de desenvolvimento que gere dado "por fora" do caminho oficial (chamar a lógica de negócio diretamente, pulando o orquestrador que também registra auditoria) cria uma lacuna que só aparece quando algo depende dessa auditoria — nesse caso, meses depois, ao construir uma validação de completude. Ao criar um script de backfill/atalho, perguntar explicitamente: "o que esse atalho **não está fazendo** que o caminho oficial faz?" — não só "o dado final está certo?".

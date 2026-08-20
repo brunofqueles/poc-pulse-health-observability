@@ -49,6 +49,7 @@ Cada decisão de arquitetura relevante está documentada com contexto, alternati
 | [013](docs/adr/adr-013-transformacao-bronze-silver.md) | Transformação Bronze → Silver (função genérica config-driven) |
 | [014](docs/adr/adr-014-gold-negocio-observabilidade.md) | Gold: KPIs de negócio e observabilidade |
 | [015](docs/adr/adr-015-aibi-dashboard.md) | AI/BI Dashboard: camada de consumo visual |
+| [016](docs/adr/adr-016-fechamento-mensal.md) | Fechamento mensal financeiro |
 
 ## Lições aprendidas
 
@@ -64,7 +65,7 @@ Databricks Free Edition · PySpark · Delta Lake · Unity Catalog · Databricks 
 
 ## Status
 
-Em desenvolvimento — documentação e arquitetura concluídas (contexto de negócio, arquitetura técnica, 15 ADRs, FinOps, schemas detalhados). Código (`src/`): os 4 simuladores completos; Bronze, Silver e Gold completas; 5 orquestradores integrados; Infrastructure as Code implementada (2 Jobs reais). Alertas reais testados, AI/BI Dashboard publicado, Genie Agent validado com 3 perguntas em linguagem natural. Próximo e último item do roadmap principal: testes automatizados.
+Em desenvolvimento — documentação e arquitetura concluídas (contexto de negócio, arquitetura técnica, 16 ADRs, FinOps, schemas detalhados). Código (`src/`): os 4 simuladores completos; Bronze, Silver e Gold completas; 6 orquestradores integrados; Infrastructure as Code implementada (3 Jobs reais). Alertas reais, AI/BI Dashboard, Genie Agent e testes automatizados (55 testes) validados. Fechamento mensal financeiro implementado e testado nos dois cenários (válido/inválido). Próximo: 5º pipeline (demonstração de escala).
 
 ## Licença
 

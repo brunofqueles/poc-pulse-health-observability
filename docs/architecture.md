@@ -133,6 +133,7 @@ Adicionar o 5º pipeline (separar Distribution do ERP) é o teste de que o desen
 - `transformacao/configuracao_seeds.py`, `promover_seed.py` — configuração e função genérica dos 6 seeds
 - `observabilidade/registrar_execucao.py` — registro de execução em `pipeline_runs`, usado pelos orquestradores (ADR-014, Fase C)
 - `observabilidade/notificadores.py` — `NotificadorBase`, `NotificadorTabela` (ADR-007)
+- `orquestracao/fechar_mes.ipynb` — 6º orquestrador, fechamento mensal financeiro (ADR-016)
 - `manutencao/limpar_landing_zone.py` — remoção de partições vencidas, com modo `dry_run` e `data_referencia` parametrizável para teste (ADR-009)
 - `orquestracao/limpar_landing_zone.py` — 5º notebook orquestrador, com Widget `dry_run` (status dinâmico em `pipeline_runs`: `dry_run` ou `sucesso`, conforme o modo)
 
@@ -142,4 +143,8 @@ Adicionar o 5º pipeline (separar Distribution do ERP) é o teste de que o desen
 
 **Alertas e visualização:** `NotificadorBase`/`NotificadorTabela` (ADR-007) testados com dado real (520 violações de `veiculo_incorreto` do backfill). `NotificadorEmail` desenhado como interface, não implementado (decisão de limite pessoal, não técnica — ver ADR-007, adendo). Primeiro AI/BI Dashboard (`Pulse - Observabilidade`, ADR-015) publicado, com 3 painéis sobre `observability.alertas`, `observability_cadeia_fria` e `pipeline_runs` — as decisões de permissão de publicação são aplicação direta da governança já documentada no ADR-005. **Genie Agent** (`Pulse - Observabilidade`) configurado sobre 8 tabelas (3 Gold + 5 observability), validado com 5 perguntas em linguagem natural — incluindo teste deliberado do limite do escopo (pergunta sobre tabela fora dele, respondida com transparência, sem fabricação) (ADR-015, adendo).
 
-**Próximo passo real:** testes automatizados (pytest/chispa) — o último item planejado do roadmap técnico principal.
+**Testes automatizados:** `tests/` (raiz do projeto) — 3 arquivos, 55 testes, 100% de sucesso. Cobrem funções puras determinísticas (`limpeza_utils.py`, `SimuladorFactory`) e funções com aleatoriedade testadas por propriedade, não valor exato (`sujeira_intencional.py`). `chispa` avaliado mas não utilizado nesta fase — as funções testáveis sem sessão Spark ativa não envolvem comparação de DataFrame; permanece disponível para uma futura fase de teste de integração da camada de transformação.
+
+**Job mensal de fechamento financeiro:** `fechar_mes.ipynb` (6º orquestrador) + `job_mensal_fechamento` (3º Job, Asset Bundles) — consolida `gold_fechamento_mensal`, validando completude via `pipeline_runs` antes de aceitar o fechamento. Descoberta e corrigida uma lacuna real (backfill nunca registrava em `pipeline_runs`, ADR-016/Lição 15). Testado nos dois cenários (mês completo/incompleto) e via Job real (`bundle run`).
+
+**Próximo passo real:** 5º pipeline (demonstração de escala).
