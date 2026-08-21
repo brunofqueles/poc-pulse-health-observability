@@ -66,3 +66,17 @@ resources/
 **Testado com sucesso**: `databricks bundle validate` (sintaxe), `databricks bundle deploy` (criação real dos 2 Jobs), `databricks bundle run job_diario` (execução real das 4 Tasks, ~3 minutos, todas com sucesso — após o backfill completo descrito no ADR-010, adendo).
 
 **Incidente encontrado e não escondido**: a primeira tentativa de `bundle run job_diario` falhou com `CloudFileNotFoundException` — detalhado no ADR-012 (adendo) e na Lição 11, `docs/licoes-aprendidas.md`.
+
+## Segundo adendo — migração real para produção (mode: production, agendamento ativo)
+
+Executada quando o projeto já tinha 5 pipelines completos, 3 Jobs testados individualmente via `bundle run`, e backfill de 67 dias validado — critério de "pronto para rodar sem supervisão constante" definido no adendo anterior.
+
+**Exigência nova, não vista em `development`:** `mode: production` exige `workspace.root_path` explícito no `databricks.yml` — sem ele, `bundle validate` falha com `"target with 'mode: production' must set 'workspace.root_path' to make sure only one copy is deployed"`. Adicionado seguindo o padrão sugerido pela própria mensagem de erro: `/Workspace/Users/<usuario>/.bundle/${bundle.name}/${bundle.target}`. Confirmado, na prática, que essa exigência existe para evitar múltiplas cópias implantadas do mesmo Bundle — proteção ativa, não burocracia vazia.
+
+**Migração não duplicou os Jobs**: a mudança de `mode` e `root_path`, seguida de `bundle deploy`, atualizou os 3 Jobs existentes (confirmado visualmente — 3 Jobs na lista, não 6) em vez de criar cópias novas ao lado das antigas. O Databricks tratou como atualização de implantação existente, não implantação nova.
+
+**Sequência aplicada**: 1 mudança de `mode` (validada e implantada uma vez, afetando os 3 Jobs de uma vez) → depois os 3 `pause_status: PAUSED → UNPAUSED`, um Job por vez, cada um com seu próprio `validate`/`deploy` isolado — permitindo confirmar cada ativação individualmente antes de seguir para a próxima, em vez de ativar tudo de uma vez sem checkpoint intermediário.
+
+**Decisão consciente sobre cota da Free Edition**: a documentação oficial confirma que a Free Edition opera sob política de "fair use" sem limite numérico publicado (nem DBU-horas, nem execuções por dia) — decidido prosseguir mesmo com essa incerteza, apoiado em estimativa baseada em medição real (job_diario ~3min/dia, os outros dois esporádicos) como carga leve, com acompanhamento manual dos primeiros dias em vez de uma garantia formal de que a cota não será excedida.
+
+**Resultado confirmado**: os 3 Jobs em "Scheduled", prefixo `[dev...]` removido, agendamento ativo — `job_diario` diariamente às 06:00, `job_manutencao` semanalmente (segunda, 07:00), `job_mensal_fechamento` mensalmente (dia 1, 06:00), todos America/Sao_Paulo.
