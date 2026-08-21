@@ -57,6 +57,8 @@ Catálogo reduzido a 3 produtos deliberadamente, cada um cobrindo uma forma farm
 | Volumetria assumida (premissa) | ~150–300 pedidos de separação/dia (notas de expedição); ~30–60 posições de estoque/dia (snapshot por centro de distribuição, não é 1:1 com pedidos) |
 | Consumidor do dado | Pulse Logistics (o que está pronto pra rota); Commercial (status do pedido); plataforma de observabilidade (SLA de separação, alerta de estoque negativo) |
 
+**Nota de implementação:** a separação prevista na linha 20 (Fase de escala) foi implementada — `SimuladorDistribution` é hoje um pipeline próprio (`ADR-017`), não mais um módulo dentro do `SimuladorERP`. Os nomes das tabelas (`erp_posicoes_estoque`, `erp_notas_expedicao`) foram mantidos deliberadamente, sem virar `distribution_*`, para não exigir mudança em Gold/observability/schemas que já as referenciam — só a origem na Landing Zone mudou (`distribution/`, não mais `erp/`).
+
 ---
 
 ## Área 3 — Pulse Logistics

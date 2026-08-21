@@ -212,3 +212,25 @@ Resultado: `'poc_pulse_observability\xa0'` — um caractere de espaço não sepa
 **Correção:** reconstrução retroativa de `pipeline_runs` (240 registros), baseada em evidência já conhecida (log de execução do backfill original + checagem de calendário), marcada explicitamente como `reconstrucao_retroativa: True` — nunca disfarçada de execução em tempo real.
 
 **Lição para o futuro:** qualquer atalho de desenvolvimento que gere dado "por fora" do caminho oficial (chamar a lógica de negócio diretamente, pulando o orquestrador que também registra auditoria) cria uma lacuna que só aparece quando algo depende dessa auditoria — nesse caso, meses depois, ao construir uma validação de completude. Ao criar um script de backfill/atalho, perguntar explicitamente: "o que esse atalho **não está fazendo** que o caminho oficial faz?" — não só "o dado final está certo?".
+
+---
+
+## Lição 16 — Checkpoint do Autoloader trava no caminho de origem original
+
+**O que aconteceu:** ao separar Distribution do ERP (5º pipeline) e apontar a fonte de `erp_posicoes_estoque`/`erp_notas_expedicao` para a nova pasta `distribution/`, a ingestão falhou com `INVALID_PARAMETER_VALUE.LOCATION_OVERLAP`.
+
+**Causa raiz:** o checkpoint dessas tabelas — nomeado só pela tabela, não pelo sistema de origem — ainda continha referência ao caminho antigo (`erp/data=.../`). O Unity Catalog recusou a troca de "endereço de origem" para uma fonte de streaming que ele já conhecia associada a outro caminho.
+
+**Correção:** reset pontual de Bronze/checkpoint/schema só das 2 tabelas afetadas (não da Silver — `MERGE` por chave permaneceu íntegro).
+
+**Lição para o futuro:** mover a origem física de uma tabela na Landing Zone (trocar de pasta/sistema) exige reset de checkpoint do Autoloader como parte do plano, não como surpresa descoberta ao testar — o checkpoint é amarrado ao caminho de origem desde a primeira execução, não só ao nome da tabela de destino.
+
+---
+
+## Lição 17 — Falha de infraestrutura não é falha de dado; `DESCRIBE HISTORY` confirma o que realmente aconteceu
+
+**O que aconteceu:** durante um teste de ingestão, a célula travou por mais de 10 minutos e depois retornou `StatusRuntimeException: UNAVAILABLE` — perda de conexão gRPC entre o notebook e o compute serverless.
+
+**Por que isso não gerou pânico nem retrabalho desnecessário:** em vez de assumir que o dado não foi escrito (e tentar reprocessar, arriscando duplicação), `DESCRIBE HISTORY` na tabela Bronze confirmou que a escrita já havia sido concluída com sucesso *antes* da queda de conexão — o dado nunca esteve em risco, só a confirmação visual na tela não chegou a aparecer.
+
+**Lição para o futuro:** quando uma célula falha por erro de infraestrutura (timeout, perda de conexão, "internal error" recomendando reiniciar compute), o primeiro passo não é reprocessar — é **verificar o estado real** via `DESCRIBE HISTORY` ou consulta direta à tabela. Mesmo princípio já estabelecido na Lição 10 (confiar no histórico real da tabela, não no estado aparente da célula/tela) — reaplicado aqui com sucesso, evitando um reprocessamento desnecessário que poderia ter introduzido risco de duplicação sem necessidade real.

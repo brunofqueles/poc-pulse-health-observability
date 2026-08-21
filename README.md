@@ -50,6 +50,7 @@ Cada decisão de arquitetura relevante está documentada com contexto, alternati
 | [014](docs/adr/adr-014-gold-negocio-observabilidade.md) | Gold: KPIs de negócio e observabilidade |
 | [015](docs/adr/adr-015-aibi-dashboard.md) | AI/BI Dashboard: camada de consumo visual |
 | [016](docs/adr/adr-016-fechamento-mensal.md) | Fechamento mensal financeiro |
+| [017](docs/adr/adr-017-quinto-pipeline-distribution.md) | 5º pipeline: separação de Distribution do ERP |
 
 ## Lições aprendidas
 
@@ -65,7 +66,7 @@ Databricks Free Edition · PySpark · Delta Lake · Unity Catalog · Databricks 
 
 ## Status
 
-Em desenvolvimento — documentação e arquitetura concluídas (contexto de negócio, arquitetura técnica, 16 ADRs, FinOps, schemas detalhados). Código (`src/`): os 4 simuladores completos; Bronze, Silver e Gold completas; 6 orquestradores integrados; Infrastructure as Code implementada (3 Jobs reais). Alertas reais, AI/BI Dashboard, Genie Agent e testes automatizados (55 testes) validados. Fechamento mensal financeiro implementado e testado nos dois cenários (válido/inválido). Próximo: 5º pipeline (demonstração de escala).
+Em desenvolvimento — documentação e arquitetura concluídas (contexto de negócio, arquitetura técnica, 17 ADRs, FinOps, schemas detalhados). Código (`src/`): **5 pipelines** (ERP/Manufacturing separado de Distribution, ADR-017 — demonstração de escala); Bronze, Silver e Gold completas nas 17 tabelas; 6 orquestradores integrados; Infrastructure as Code implementada (3 Jobs reais). Alertas reais, AI/BI Dashboard, Genie Agent e testes automatizados (55 testes) validados. Fechamento mensal financeiro validado. Histórico real: backfill de 67 dias (16/06 a 21/08/2026, sem lacuna até a data atual), validado matematicamente. Próximo: migração para produção.
 
 ## Licença
 

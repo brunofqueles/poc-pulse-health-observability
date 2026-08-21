@@ -1,6 +1,8 @@
-# ERP — Manufacturing + Distribution
+# ERP — Manufacturing
 
 > Detalhamento de schema. Convenções gerais (sujeira intencional, calendário, chaves cross-sistema) em [`README.md`](README.md).
+>
+> **Nota:** a partir do 5º pipeline (`ADR-017`), este arquivo cobre só Manufacturing — Distribution (`erp_posicoes_estoque`, `erp_notas_expedicao`) virou pipeline próprio, documentado em [`distribution.md`](distribution.md). Nomes de tabela mantidos sem alteração.
 
 ### `bronze.erp_produtos` (dimensão fixa, seed único — catálogo controlado, sem sujeira injetada)
 
@@ -24,24 +26,3 @@
 | `quantidade_produzida` | int | número com vírgula (`1.250,00`) | |
 | `status_qc` | string | acentuação/caixa | 90% aprovado / 10% reprovado |
 | `data_liberacao` | date/null | nulo representado de formas diferentes | nulo se reprovado |
-
-### `bronze.erp_posicoes_estoque` (evento diário, snapshot)
-
-| Campo | Tipo lógico | Sujeira injetada | Nota |
-|---|---|---|---|
-| `posicao_id` | string | — | Chave de negócio (adicionada após MERGE INTO exigir chave verdadeiramente única — `lote_id`+`centro_distribuicao_id` sozinhos não garantiam unicidade) |
-| `lote_id` | string (FK) | — | só lotes com QC aprovado |
-| `centro_distribuicao_id` | string | espaço/caixa inconsistente | |
-| `quantidade` | int | número com vírgula; ocasionalmente negativo (de propósito) | testa regra de estoque negativo |
-| `data_posicao` | date | formato misto | |
-
-### `bronze.erp_notas_expedicao` (evento diário)
-
-| Campo | Tipo lógico | Sujeira injetada | Nota |
-|---|---|---|---|
-| `nota_expedicao_id` | string | — | |
-| `pedido_id` | string (FK cross-sistema, CRM) | — | |
-| `lote_id` | string (FK) | — | alocado por FEFO |
-| `centro_distribuicao_id` | string | espaço/caixa inconsistente | |
-| `quantidade_expedida` | int | número com vírgula | |
-| `data_expedicao` | date | formato misto | |

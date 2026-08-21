@@ -50,11 +50,12 @@ Catalog único `poc_pulse_observability` (nome ajustado para manter o prefixo `p
 
 **Nota sobre ordem de geração:** além da dependência de Task na transformação (ADR-006), existe uma dependência de ordem já na própria geração — a cadeia completa é CRM → ERP → TMS → Financeiro, cada sistema lendo o(s) sistema(s) anterior(es) da Landing Zone para a mesma `data_referencia` (ver ADR-011, incluindo o adendo). Como consequência, a cadeia inteira (pedido → produção → expedição → entrega → faturamento) colapsa no mesmo dia na simulação atual — sem defasagem real de tempo entre as etapas.
 
-### Os 4 pipelines (Fase 1)
+### Os 5 pipelines
 
 | Pipeline | Fonte | Tabelas Bronze |
 |---|---|---|
-| ERP (Manufacturing + Distribution) | dbldatagen — módulos Produção e Estoque na mesma fonte | `erp_lotes_producao`, `erp_posicoes_estoque`, `erp_notas_expedicao` |
+| ERP (Manufacturing) | dbldatagen | `erp_lotes_producao` |
+| Distribution | dbldatagen — separado do ERP no 5º pipeline (ADR-017, demonstração de escala) | `erp_posicoes_estoque`, `erp_notas_expedicao` (nomes mantidos, origem mudou) |
 | CRM (Commercial) | dbldatagen + Faker (nomes, empresas, emails) | `crm_pedidos`, `crm_itens_pedido`, `crm_atendimento` |
 | TMS (Logistics) | dbldatagen — inclui leitura de temperatura por remessa | `tms_remessas`, `tms_leituras_temperatura`, `tms_comprovantes_entrega` |
 | Financeiro (SSC) | dbldatagen — depende de eventos de entrega e pedido | `financeiro_faturas`, `financeiro_contas_receber` |
@@ -114,14 +115,19 @@ Adicionar o 5º pipeline (separar Distribution do ERP) é o teste de que o desen
 - `adr-012-ingestao-autoloader.md` — configuração e convenções da ingestão Landing→Bronze
 - `adr-013-transformacao-bronze-silver.md` — função genérica config-driven, 6 categorias de limpeza
 - `adr-014-gold-negocio-observabilidade.md` — desenho da camada Gold (overwrite, grão por pergunta de negócio)
+- `adr-015-aibi-dashboard.md` — AI/BI Dashboard e Genie Agent, camada de consumo visual e linguagem natural
+- `adr-016-fechamento-mensal.md` — consolidação mensal com validação de completude e alerta condicional
+- `adr-017-quinto-pipeline-distribution.md` — separação de Distribution do ERP, demonstração de escala
 
 **Infraestrutura já criada:** catalog `poc_pulse_observability`, os 5 schemas, tags aplicadas, Volume `raw` na Landing Zone.
 
 **Código já implementado (`src/`):**
 - `simuladores/simulador_base.py` — classe base (OOP, ADR-003)
 - `simuladores/sujeira_intencional.py` — 6 funções puras de sujeira, testadas
-- `simuladores/simulador_erp.py`, `simulador_crm.py`, `simulador_tms.py`, `simulador_financeiro.py` — os 4 simuladores completos, com chave de negócio própria em toda tabela de evento
-- `simuladores/simulador_factory.py` — mapeamento sistema → classe e ordem de execução (ADR-011)
+- `simuladores/simulador_erp.py` — Manufacturing (a partir do ADR-017, só isso)
+- `simuladores/simulador_distribution.py` — Distribution, 5º pipeline separado do ERP (ADR-017)
+- `simuladores/simulador_crm.py`, `simulador_tms.py`, `simulador_financeiro.py` — os demais simuladores, cada um com chave de negócio própria em toda tabela de evento
+- `simuladores/simulador_factory.py` — mapeamento sistema → classe e ordem de execução, 5 pipelines (ADR-011)
 - `orquestracao/gerar_dados.py` — notebook orquestrador de geração, com Widgets (ADR-008)
 - `orquestracao/ingerir_dados.py` — notebook orquestrador de ingestão, as 11 tabelas
 - `orquestracao/promover_seeds.py` — notebook orquestrador dos 6 seeds (Landing → Bronze → Silver)
@@ -137,9 +143,9 @@ Adicionar o 5º pipeline (separar Distribution do ERP) é o teste de que o desen
 - `manutencao/limpar_landing_zone.py` — remoção de partições vencidas, com modo `dry_run` e `data_referencia` parametrizável para teste (ADR-009)
 - `orquestracao/limpar_landing_zone.py` — 5º notebook orquestrador, com Widget `dry_run` (status dinâmico em `pipeline_runs`: `dry_run` ou `sucesso`, conforme o modo)
 
-**Infraestrutura como código:** `databricks.yml` + `resources/` (2 Jobs: `job_diario` com 4 Tasks dependentes e Job Notifications configurado (falha + duração), `job_manutencao` com 1 Task, ambos pausados por segurança — `pause_status: PAUSED`). Testado via CLI: `validate`, `deploy`, `run` — as 4 Tasks do Job diário executando com sucesso via Databricks Workflows real, e email de notificação recebido de verdade em teste.
+**Infraestrutura como código:** `databricks.yml` + `resources/` (3 Jobs: `job_diario` com 4 Tasks dependentes e Job Notifications configurado, `job_manutencao` com 1 Task, `job_mensal_fechamento` com 1 Task e cálculo automático de mês anterior — todos com `description`, pausados por segurança, `pause_status: PAUSED`). Testado via CLI: `validate`, `deploy`, `run` — todos os Jobs executando com sucesso via Databricks Workflows real, e email de notificação recebido de verdade em teste.
 
-**Estado dos dados:** Bronze e Silver completas nas 17 tabelas. Gold completa nas 3 fases. Histórico real: **backfill de 60 dias** (16/06 a 14/08/2026) executado e validado matematicamente contra o calendário de cada sistema — 44 dias úteis (Manufacturing/Financeiro), 52 dias (Distribution/TMS), 60 dias (Commercial). `observability_cadeia_fria` usa `LEFT JOIN` com categoria explícita "não verificável", nunca `INNER JOIN` (ADR-014, adendo).
+**Estado dos dados:** Bronze e Silver completas nas 17 tabelas, agora sob **5 pipelines** (ERP/Manufacturing separado de Distribution, ADR-017). Gold completa nas 3 fases. Histórico real: **backfill de 67 dias** (16/06 a 21/08/2026, estendido até a data real do teste — sem lacuna entre o fim do backfill e "hoje") executado e validado matematicamente contra o calendário de cada sistema — 49 dias úteis (Manufacturing/Financeiro), 58 dias (Distribution/TMS), 67 dias (Commercial). `pipeline_runs` registrado durante a própria geração desta vez, não como correção retroativa (corrige a causa raiz da Lição 15). `observability_cadeia_fria` usa `LEFT JOIN` com categoria explícita "não verificável", nunca `INNER JOIN` (ADR-014, adendo).
 
 **Alertas e visualização:** `NotificadorBase`/`NotificadorTabela` (ADR-007) testados com dado real (520 violações de `veiculo_incorreto` do backfill). `NotificadorEmail` desenhado como interface, não implementado (decisão de limite pessoal, não técnica — ver ADR-007, adendo). Primeiro AI/BI Dashboard (`Pulse - Observabilidade`, ADR-015) publicado, com 3 painéis sobre `observability.alertas`, `observability_cadeia_fria` e `pipeline_runs` — as decisões de permissão de publicação são aplicação direta da governança já documentada no ADR-005. **Genie Agent** (`Pulse - Observabilidade`) configurado sobre 8 tabelas (3 Gold + 5 observability), validado com 5 perguntas em linguagem natural — incluindo teste deliberado do limite do escopo (pergunta sobre tabela fora dele, respondida com transparência, sem fabricação) (ADR-015, adendo).
 
@@ -147,4 +153,4 @@ Adicionar o 5º pipeline (separar Distribution do ERP) é o teste de que o desen
 
 **Job mensal de fechamento financeiro:** `fechar_mes.ipynb` (6º orquestrador) + `job_mensal_fechamento` (3º Job, Asset Bundles) — consolida `gold_fechamento_mensal`, validando completude via `pipeline_runs` antes de aceitar o fechamento. Descoberta e corrigida uma lacuna real (backfill nunca registrava em `pipeline_runs`, ADR-016/Lição 15). Testado nos dois cenários (mês completo/incompleto) e via Job real (`bundle run`).
 
-**Próximo passo real:** 5º pipeline (demonstração de escala).
+**Próximo passo real:** migração para produção (`mode: development` → `production`, `pause_status: UNPAUSED` nos 3 Jobs, redeploy). Depois: revisão do AI/BI Dashboard (incluir `gold_fechamento_mensal` e alertas).

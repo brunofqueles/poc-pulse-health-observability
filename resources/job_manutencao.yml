@@ -2,6 +2,8 @@ resources:
   jobs:
     job_manutencao:
       name: "Pulse - Job Manutencao"
+      description: |
+        Limpeza da Landing Zone: remove particoes com mais de 30 dias (ADR-009), com modo dry_run como padrao de seguranca. Agendado semanalmente (segunda-feira, 07:00, America/Sao_Paulo).
       tags:
         ambiente: "poc"
         projeto: "pulse-health-observability"
