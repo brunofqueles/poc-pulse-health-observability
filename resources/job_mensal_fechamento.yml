@@ -2,6 +2,8 @@ resources:
   jobs:
     job_mensal_fechamento:
       name: "Pulse - Job Mensal Fechamento"
+      description: |
+        Fechamento financeiro mensal: consolida faturamento, valida completude via pipeline_runs antes de aceitar o fechamento, dispara alerta se o mes estiver incompleto (ADR-016). mes_referencia calculado automaticamente (mes anterior a data_execucao) quando nao informado. Agendado para o dia 1 de cada mes, as 06:00 (America/Sao_Paulo).
       tags:
         ambiente: "poc"
         projeto: "pulse-health-observability"

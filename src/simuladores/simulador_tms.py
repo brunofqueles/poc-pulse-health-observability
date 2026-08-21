@@ -86,9 +86,9 @@ class SimuladorTMS(SimuladorDeSistema):
         return registros_por_tabela
 
     def _ler_notas_expedicao(self, data_referencia: date) -> list:
-        """Lê erp_notas_expedicao da Landing Zone do ERP, para a mesma data."""
+        """Lê erp_notas_expedicao da Landing Zone do Distribution (5º pipeline), para a mesma data."""
         data_str = data_referencia.strftime("%Y-%m-%d")
-        caminho = f"/Volumes/{self.catalog}/landing/{self.volume_landing}/erp/data={data_str}/erp_notas_expedicao.json"
+        caminho = f"/Volumes/{self.catalog}/landing/{self.volume_landing}/distribution/data={data_str}/erp_notas_expedicao.json"
         try:
             df = self.spark.read.json(caminho)
             return [row.asDict() for row in df.select("nota_expedicao_id", "pedido_id", "lote_id").collect()]

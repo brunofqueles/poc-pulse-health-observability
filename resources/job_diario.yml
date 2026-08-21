@@ -2,6 +2,8 @@ resources:
   jobs:
     job_diario:
       name: "Pulse - Job Diario"
+      description: |
+        Pipeline diario da Pulse Health Platform: gera dados sinteticos dos 4 sistemas (ERP, CRM, TMS, Financeiro), ingere via Autoloader (Landing -> Bronze), promove seeds e constroi as tabelas Gold/observability. 4 Tasks dependentes, ordem CRM -> ERP -> TMS -> Financeiro (ADR-011). Agendado para 06:00 (America/Sao_Paulo).
       tags:
         ambiente: "poc"
         projeto: "pulse-health-observability"

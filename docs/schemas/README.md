@@ -30,7 +30,8 @@
 
 ## Arquivos por sistema
 
-- [`erp.md`](erp.md) — Manufacturing + Distribution
+- [`erp.md`](erp.md) — Manufacturing
+- [`distribution.md`](distribution.md) — Distribution (separado do ERP no 5º pipeline, ADR-017)
 - [`crm.md`](crm.md) — Commercial
 - [`tms.md`](tms.md) — Logistics
 - [`financeiro.md`](financeiro.md) — SSC

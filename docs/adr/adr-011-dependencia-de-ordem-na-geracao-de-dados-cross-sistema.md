@@ -40,3 +40,11 @@ SimuladorCRM ──> SimuladorERP ──> SimuladorTMS ──> SimuladorFinancei
 `SimuladorTMS` lê dois arquivos do ERP (`erp_notas_expedicao` para `pedido_id`/`lote_id`, `erp_lotes_producao` para resolver `produto_id` → `exige_cadeia_fria`, necessário para a falha cruzada de cadeia fria). `SimuladorFinanceiro` lê **dois sistemas diferentes** na mesma execução: TMS (`tms_comprovantes_entrega` + `tms_remessas`, para saber quais pedidos tiveram entrega confirmada) e CRM (`crm_pedidos`, para o valor original a reconciliar).
 
 **Descoberta adicional:** como cada sistema sempre lê o *mesmo dia* do sistema anterior (não um dia passado), a cadeia inteira — pedido, produção, expedição, entrega, faturamento — colapsa em `data_referencia` única na simulação atual. Não há defasagem real de dias entre pedido e entrega, diferente do que aconteceria numa operação real. Isso é uma extensão da mesma simplificação de continuidade já registrada no ADR-010, não uma limitação nova — mas vale este registro explícito porque afeta como interpretar a "data" de qualquer registro gerado: ela representa o dia de geração, não necessariamente o dia real em que o evento aconteceria numa cadeia física com prazo.
+
+## Segundo adendo — cadeia estendida para 5 pipelines (Distribution separado, ADR-017)
+
+```
+CRM ──> ERP ──> Distribution ──> TMS ──> Financeiro
+```
+
+`SimuladorDistribution` lê `crm_pedidos` (pedido_id) e `erp_lotes_producao` (lote_id real, filtrando `status_qc` aprovado por correspondência de texto) — mesmo padrão de cross-read já estabelecido, aplicado a um sistema que antes vivia junto do ERP na mesma classe. Confirma a previsão original deste ADR: "se o TMS também precisar ler dado de outro sistema, tratar como precedente" — o mesmo valeu para Distribution.
