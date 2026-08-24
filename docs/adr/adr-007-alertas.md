@@ -64,3 +64,18 @@ NotificadorBase (classe abstrata)
 **Escopo final de canais ativos:** Job Notifications (execução) + `NotificadorTabela` (qualidade/negócio) — 2 canais reais, cobrindo os 3 eixos de observabilidade já definidos. O contrato `NotificadorBase` está provado com uma implementação real (`NotificadorTabela`); a ausência de uma segunda implementação de canal externo não compromete a demonstração de "canal plugável" via OOP (ADR-003), que é sobre o contrato, não sobre quantidade de implementações.
 
 **Consumo dos alertas:** `docs/adr/adr-015-aibi-dashboard.md` — o primeiro AI/BI Dashboard do projeto, com um painel dedicado a `observability.alertas`.
+
+## Segundo adendo — `NotificadorEmail` implementado (revoga a Opção C)
+
+A Opção C (não implementar) foi revisada: o bloqueio original era 2FA na **conta pessoal** do autor (Outlook) — resolvido criando uma **conta Gmail dedicada de portfólio** (`bruno.queles.dataeng@gmail.com`, reaproveitável em projetos futuros, não amarrada ao nome deste projeto), com 2FA ativado via Google Authenticator desde a criação. Corrige também a "Pendência registrada" do adendo anterior, que assumia host Outlook — o host final é `smtp.gmail.com:587`, não `smtp.office365.com`.
+
+**Credencial nunca em texto no código:** senha de aplicativo guardada em `pulse-secrets/gmail-app-password` (Databricks Secret Scope, já confirmado funcional no Free Edition no adendo anterior). Testado explicitamente que a proteção de redação automática funciona: `print()` do valor lido via `dbutils.secrets.get()` retorna `[REDACTED]`, mesmo com a chamada direta.
+
+**Desenho:** `NotificadorEmail(NotificadorBase)` — captura qualquer exceção internamente e retorna `False`, nunca deixa erro de rede/autenticação subir e derrubar o restante do fluxo de alerta (`fechar_mes` continua funcionando mesmo se o envio de email falhar).
+
+**Validado em 3 camadas, não só uma:**
+1. Leitura segura do Secret, isolada (confirmado `[REDACTED]` na tentativa de exposição).
+2. Envio real via classe, isolado em spike (`src/spikes/teste_notificador_email`) — primeiro envio de email de verdade em todo o projeto (o spike original do ADR-007 só testou conectividade SMTP, nunca envio).
+3. Integração real em `fechar_mes.ipynb` — os dois canais (`NotificadorTabela` + `NotificadorEmail`) disparando juntos quando `fechamento_valido = False`, testado contra agosto/2026 (mês genuinamente incompleto). Email recebido com o conteúdo correto, refletindo o estado real (`5 dias faltando` — número reduzido em relação a testes anteriores, prova de que o `job_diario` já estava rodando sozinho em produção, preenchendo dias automaticamente).
+
+**Escopo final de canais ativos, atualizado:** Job Notifications (execução) + `NotificadorTabela` (fallback garantido) + `NotificadorEmail` (tempo real) — 3 canais reais. `NotificadorWebhook`, cogitado no desenho original, permanece não implementado — nenhum caso de uso concreto surgiu que exigisse esse canal específico.
