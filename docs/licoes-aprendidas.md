@@ -234,3 +234,19 @@ Resultado: `'poc_pulse_observability\xa0'` — um caractere de espaço não sepa
 **Por que isso não gerou pânico nem retrabalho desnecessário:** em vez de assumir que o dado não foi escrito (e tentar reprocessar, arriscando duplicação), `DESCRIBE HISTORY` na tabela Bronze confirmou que a escrita já havia sido concluída com sucesso *antes* da queda de conexão — o dado nunca esteve em risco, só a confirmação visual na tela não chegou a aparecer.
 
 **Lição para o futuro:** quando uma célula falha por erro de infraestrutura (timeout, perda de conexão, "internal error" recomendando reiniciar compute), o primeiro passo não é reprocessar — é **verificar o estado real** via `DESCRIBE HISTORY` ou consulta direta à tabela. Mesmo princípio já estabelecido na Lição 10 (confiar no histórico real da tabela, não no estado aparente da célula/tela) — reaplicado aqui com sucesso, evitando um reprocessamento desnecessário que poderia ter introduzido risco de duplicação sem necessidade real.
+
+---
+
+## Lição 18 — `sys.path` automático dos Repos não existe em Jobs de produção; e o mesmo comando retorna caminhos diferentes conforme o contexto
+
+**O que aconteceu:** logo após a migração para `mode: production`, a primeira execução agendada de `job_diario` falhou com `ModuleNotFoundError: No module named 'src'` — todo `from src...` que sempre funcionou, o projeto inteiro, quebrou de uma vez.
+
+**Causa raiz:** o `sys.path` automático que o Databricks Repos oferece (raiz do repositório sempre importável, é por isso que `from src...` nunca precisou de configuração especial até aqui) só existe em `mode: development`, com *source-linked deployment*. Em `production`, o Job roda a cópia implantada, sem essa mágica.
+
+**Primeira correção, insuficiente:** adicionar o caminho ao `sys.path` manualmente, calculado via `dbutils.notebook.entry_point...notebookPath().get()` — funcionou em teste manual, mas voltou a falhar na execução real via Job.
+
+**Causa exata da segunda falha:** o mesmo comando (`notebookPath().get()`) retorna o caminho **sem** o prefixo `/Workspace` quando rodado interativamente, mas **com** o prefixo quando rodado via Job — inconsistência não documentada, descoberta só inspecionando o resultado real via API (`databricks jobs get-run-output`), não por dedução.
+
+**Correção definitiva:** calcular os dois formatos possíveis de caminho e adicionar ambos ao `sys.path`, em vez de assumir qual formato o contexto vai usar.
+
+**Lição para o futuro:** um comando que "funciona" em teste manual não prova que funciona em todo contexto de execução — **execução interativa e execução via Job são ambientes diferentes**, mesmo rodando o mesmo notebook, com o mesmo código. Qualquer coisa que dependa do contexto de execução (caminho do notebook, variáveis de ambiente, credenciais implícitas) precisa ser testada nos dois contextos antes de ser considerada corrigida — validação em 3 camadas (manual → Job isolado → Job completo) é o que realmente confirma uma correção, não apenas a primeira camada que passar.
