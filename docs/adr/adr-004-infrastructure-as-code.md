@@ -80,3 +80,40 @@ Executada quando o projeto já tinha 5 pipelines completos, 3 Jobs testados indi
 **Decisão consciente sobre cota da Free Edition**: a documentação oficial confirma que a Free Edition opera sob política de "fair use" sem limite numérico publicado (nem DBU-horas, nem execuções por dia) — decidido prosseguir mesmo com essa incerteza, apoiado em estimativa baseada em medição real (job_diario ~3min/dia, os outros dois esporádicos) como carga leve, com acompanhamento manual dos primeiros dias em vez de uma garantia formal de que a cota não será excedida.
 
 **Resultado confirmado**: os 3 Jobs em "Scheduled", prefixo `[dev...]` removido, agendamento ativo — `job_diario` diariamente às 06:00, `job_manutencao` semanalmente (segunda, 07:00), `job_mensal_fechamento` mensalmente (dia 1, 06:00), todos America/Sao_Paulo.
+
+## Terceiro adendo — incidente real: `ModuleNotFoundError` pós-migração, causa raiz e correção definitiva
+
+Na primeira execução agendada de verdade de `job_diario` após a migração, a Task `gerar_dados` falhou com `ModuleNotFoundError: No module named 'src'` — nunca visto antes, porque toda validação até então rodava em `mode: development`.
+
+**Causa raiz:** em `development`, o Databricks Repos adiciona automaticamente a raiz do repositório ao `sys.path` — é por isso que `from src...` sempre funcionou sem configuração explícita desde o início do projeto. Em `production`, com *source-linked deployment* desativado, o Job roda uma **cópia implantada** dos notebooks (`.bundle/<nome>/dev/files/...`), e essa mágica de path automático deixa de existir.
+
+**Primeira tentativa de correção (parcialmente insuficiente):** adicionar `sys.path.append()` calculando o caminho a partir de `dbutils.notebook.entry_point.getDbutils().notebook().getContext().notebookPath().get()` — mecanismo confirmado funcional no compute serverless (testado em spike antes de aplicar). Funcionou em execução manual/interativa, mas **voltou a falhar** na execução real via Job.
+
+**Diagnóstico da causa exata (com apoio de investigação automatizada via API do Databricks):** o caminho retornado por `notebookPath().get()` vem **sem** o prefixo `/Workspace` quando executado interativamente, mas **com** o prefixo quando executado via Job — inconsistência de formato entre os dois contextos de execução, nunca documentada explicitamente, descoberta só através de inspeção real do resultado (`jobs get-run-output` via CLI) e leitura do notebook implantado de fato.
+
+**Correção definitiva:** calcular os dois candidatos de caminho (com e sem `/Workspace`) e adicionar ambos ao `sys.path`, em vez de tentar adivinhar qual formato o contexto de execução vai usar:
+
+```python
+import sys
+
+notebook_path = dbutils.notebook.entry_point.getDbutils().notebook().getContext().notebookPath().get()
+
+if "/files/" in notebook_path:
+    root_relative = notebook_path.split("/files/")[0] + "/files"
+else:
+    root_relative = notebook_path.rsplit("/src/", 1)[0]
+
+candidatos = {root_relative}
+if root_relative.startswith("/Workspace"):
+    candidatos.add(root_relative[len("/Workspace"):])
+else:
+    candidatos.add("/Workspace" + root_relative)
+
+for candidato in candidatos:
+    if candidato not in sys.path:
+        sys.path.append(candidato)
+```
+
+Aplicada nos 6 notebooks orquestradores (`gerar_dados`, `ingerir_dados`, `promover_seeds`, `construir_gold`, `limpar_landing_zone`, `fechar_mes`), logo no início de cada um, antes de qualquer `from src...`.
+
+**Validação em 3 camadas, não só uma:** (1) manual/interativo em cada notebook individualmente; (2) `bundle run job_diario` isolando só a primeira Task corrigida, confirmando sucesso antes de replicar nas demais; (3) os 3 Jobs completos via `bundle run`, todos com sucesso (`job_diario` 4min22s, `job_manutencao` 31s, `job_mensal_fechamento` 27s) — só então o incidente foi considerado resolvido de verdade, não just "parece que funcionou".
