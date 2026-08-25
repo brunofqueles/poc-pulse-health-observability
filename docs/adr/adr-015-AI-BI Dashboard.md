@@ -34,7 +34,7 @@ Um AI/BI Dashboard (`Pulse - Observabilidade`), com 3 painéis, cada um com desc
 
 - O dashboard depende do mesmo SQL Warehouse único (2X-Small) da Free Edition (`architecture.md`, seção de limitações) — não testado sob múltiplos usuários simultâneos, irrelevante no contexto mono-usuário atual.
 - Refresh do dashboard é manual nesta fase (não configuramos agendamento automático) — item a revisitar se o projeto migrar para `mode: production`.
-- **Genie implementado nesta fase** — ver adendo abaixo.
+- **Genie implementado nesta fase** — ver adendo abaixo. **Refresh agendado e revisão final também implementados** — ver segundo adendo.
 
 ## Adendo — Genie Agent implementado e validado
 
@@ -50,3 +50,19 @@ Criado `Pulse - Observabilidade` (Genie Agent), com escopo de **8 tabelas**: as 
 5. **Teste deliberado do limite do escopo** — "Quantos clientes ativos existem no sistema?" (`crm_clientes` está na Silver, fora do escopo configurado): o Genie **não inventou número nem acessou a tabela fora de escopo** — respondeu com transparência que a tabela de clientes não está disponível, e ofereceu uma métrica substituta razoável (contagem de `pedido_id` únicos), sinalizando explicitamente que era aproximação.
 
 **Correção de uma hipótese levantada e descartada durante a investigação:** ao ver a primeira resposta de faturamento (antes de confirmar que `gold` já estava no escopo), foi levantada a hipótese, apoiada por uma fonte secundária (blog de terceiros), de que o Genie poderia alcançar tabelas fora do Space configurado via edição manual de query. O teste 5 (acima) mostrou o oposto para consulta em linguagem natural: o escopo configurado foi respeitado com honestidade, sem fabricação. A fonte secundária tratava de um cenário diferente (edição manual da query gerada, não a interpretação da pergunta em si) — reforça a prática já seguida no projeto de testar diretamente em vez de confiar em fonte não-oficial sem verificação própria.
+
+## Segundo adendo — revisão final do Dashboard (2 painéis novos, 1 ajustado, agendamento ativado)
+
+Executada como último item do roadmap técnico principal, depois de `NotificadorEmail` (ADR-007, segundo adendo) e `job_mensal_fechamento` (ADR-016) estarem implementados — ordem deliberada, para o Dashboard já nascer completo em vez de precisar de uma segunda rodada de revisão.
+
+**2 painéis novos:**
+- **Fechamento Mensal** (`gold_fechamento_mensal`) — valores monetários arredondados com `ROUND(..., 2)` na própria query, evitando exibir a precisão de ponto flutuante completa (`11091699.180458069`) que o cálculo produz internamente.
+- **Alertas por Tipo** (`observability.alertas`, agregado por `tipo_evento`) — visualizado como gráfico de rosca (donut), não barra: com poucas categorias (`cadeia_fria`, `fechamento_invalido`), rosca comunica melhor "proporção do todo" do que comparação de valores absolutos; a decisão inverteria para barra se o número de categorias crescesse significativamente.
+
+**1 painel ajustado:** "Status de Execução por Pipeline" ganhou a coluna `item` (antes só `pipeline`+`status`) — sem ela, a granularidade do painel escondia exatamente a informação que motivou a revisão (confirmar visualmente que `distribution`, o 5º pipeline, aparece como item próprio dentro de `gerar_dados`, coerente com a decisão de desenho já documentada no ADR-014, adendo, sobre o campo `item` variar de significado por pipeline).
+
+**Formatação de coluna nativa, não `date_format()` em SQL:** `timestamp_alerta` mantido como tipo `timestamp` real (não convertido para string), com a formatação de exibição (`DD/MM/YYYY HH:mm:ss`) aplicada na configuração da visualização — preserva a ordenação cronológica correta nativamente, em vez de depender de `ORDER BY` sobre uma coluna auxiliar não exibida (alternativa cogitada e descartada por ser mais frágil).
+
+**Refresh agendado:** diário, 07:00 (America/Sao_Paulo) — uma hora de folga após o horário de `job_diario` (06:00, execução medida em ~3-4min), garantindo que o Dashboard sempre reflita o dado mais recente sem depender de alguém lembrar de clicar em Refresh manualmente.
+
+**Esclarecimento sobre o fechamento mensal não recalcular sozinho todo dia:** `fechar_mes` só executa automaticamente via `job_mensal_fechamento`, agendado para o dia 1 de cada mês — não é chamado por `job_diario`. Um alerta de "N dias faltando" registrado num teste manual permanece com aquele número congelado em `observability.alertas` até a próxima execução real de `fechar_mes` (mensal, ou manual) recalcular — comportamento correto e intencional (ADR-010: nenhuma execução extra fora do fluxo automatizado planejado), não bug.
