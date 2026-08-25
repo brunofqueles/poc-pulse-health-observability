@@ -66,7 +66,7 @@ Databricks Free Edition · PySpark · Delta Lake · Unity Catalog · Databricks 
 
 ## Status
 
-Em desenvolvimento — documentação e arquitetura concluídas (contexto de negócio, arquitetura técnica, 17 ADRs, FinOps, schemas detalhados). Código (`src/`): 5 pipelines completos; Bronze, Silver e Gold completas; 6 orquestradores integrados. **Infraestrutura em produção**: os 3 Jobs (Asset Bundles, `mode: production`) migrados, agendados ativamente e validados via execução real. **3 canais de alerta reais** (Job Notifications, NotificadorTabela, NotificadorEmail via Gmail dedicado), AI/BI Dashboard, Genie Agent e testes automatizados (55 testes) validados. Backfill de 67 dias, sem lacuna até a data atual. Próximo e último item do roadmap: revisão final do AI/BI Dashboard.
+**Roadmap técnico principal completo.** Documentação e arquitetura concluídas (contexto de negócio, arquitetura técnica, 17 ADRs, FinOps, schemas detalhados). Código (`src/`): 5 pipelines; Bronze, Silver e Gold completas; 6 orquestradores integrados; testes automatizados (55 testes). **Infraestrutura em produção**: os 3 Jobs (Asset Bundles, `mode: production`) migrados, agendados ativamente e validados via execução real. **3 canais de alerta reais** (Job Notifications, NotificadorTabela, NotificadorEmail via Gmail dedicado, HTML formatado). **AI/BI Dashboard final** (5 painéis, refresh agendado) e Genie Agent validados. Backfill de 67 dias, sem lacuna até a data atual. Restam apenas itens de backlog e o treino de apresentação, a critério do autor.
 
 ## Licença
 
