@@ -51,6 +51,7 @@ Cada decisão de arquitetura relevante está documentada com contexto, alternati
 | [015](docs/adr/adr-015-aibi-dashboard.md) | AI/BI Dashboard: camada de consumo visual |
 | [016](docs/adr/adr-016-fechamento-mensal.md) | Fechamento mensal financeiro |
 | [017](docs/adr/adr-017-quinto-pipeline-distribution.md) | 5º pipeline: separação de Distribution do ERP |
+| [018](docs/adr/adr-018-agente-automacao-git.md) | Agente de Automação Git (Nível A, merge manual) |
 
 ## Lições aprendidas
 
@@ -66,7 +67,7 @@ Databricks Free Edition · PySpark · Delta Lake · Unity Catalog · Databricks 
 
 ## Status
 
-**Roadmap técnico principal completo.** Documentação e arquitetura concluídas (contexto de negócio, arquitetura técnica, 17 ADRs, FinOps, schemas detalhados). Código (`src/`): 5 pipelines; Bronze, Silver e Gold completas; 6 orquestradores integrados; testes automatizados (55 testes). **Infraestrutura em produção**: os 3 Jobs (Asset Bundles, `mode: production`) migrados, agendados ativamente e validados via execução real. **3 canais de alerta reais** (Job Notifications, NotificadorTabela, NotificadorEmail via Gmail dedicado, HTML formatado). **AI/BI Dashboard final** (5 painéis, refresh agendado) e Genie Agent validados. Backfill de 67 dias, sem lacuna até a data atual. Restam apenas itens de backlog e o treino de apresentação, a critério do autor.
+**Roadmap técnico principal completo.** Documentação e arquitetura concluídas (contexto de negócio, arquitetura técnica, 18 ADRs, FinOps, schemas detalhados). Código (`src/`): 5 pipelines; Bronze, Silver e Gold completas; 6 orquestradores integrados; testes automatizados (55 testes). **Infraestrutura em produção**: os 3 Jobs (Asset Bundles, `mode: production`) migrados, agendados ativamente e validados via execução real. **3 canais de alerta reais** (Job Notifications, NotificadorTabela, NotificadorEmail via Gmail dedicado, HTML formatado). **AI/BI Dashboard final** (5 painéis, refresh agendado) e Genie Agent validados. **Agente de Automação Git** (Nível A, merge sempre manual) validado publicando sua própria documentação. Backfill de 67 dias, sem lacuna até a data atual. Restam apenas sistemas adicionais e o treino de apresentação, a critério do autor.
 
 ## Licença
 
