@@ -153,6 +153,8 @@ Adicionar o 5º pipeline (separar Distribution do ERP) é o teste de que o desen
 
 **Testes automatizados:** `tests/` (raiz do projeto) — 3 arquivos, 55 testes, 100% de sucesso. Cobrem funções puras determinísticas (`limpeza_utils.py`, `SimuladorFactory`) e funções com aleatoriedade testadas por propriedade, não valor exato (`sujeira_intencional.py`). `chispa` avaliado mas não utilizado nesta fase — as funções testáveis sem sessão Spark ativa não envolvem comparação de DataFrame; permanece disponível para uma futura fase de teste de integração da camada de transformação.
 
-**Próximo passo real:** nenhum — roadmap técnico principal completo. Restam apenas itens de backlog (agente de automação de commits/PR, sistemas adicionais) e o treino de apresentação, a critério do autor.
+**Agente de Automação Git:** `AgenteAutomacaoGit` (Nível A — branch/commit/PR automáticos, merge sempre manual), via API REST do GitHub, credencial em Secret Scope (`pulse-secrets/github-pat`). MVP de 1 arquivo por commit. Validado nos 3 métodos isolados e no ponto de entrada único (`publicar_mudanca`) usado para publicar sua própria documentação (ADR-018) — primeiro uso real, não só teste. Branch `main` protegida via GitHub Ruleset (push direto bloqueado, PR sempre obrigatório) após a introdução do token de longa duração.
+
+**Próximo passo real:** nenhum — roadmap técnico principal completo, incluindo o item de backlog do Agente de Automação. Restam apenas sistemas adicionais (RH, Marketing, Compras) e o treino de apresentação, a critério do autor.
 
 **Job mensal de fechamento financeiro:** `fechar_mes.ipynb` (6º orquestrador) + `job_mensal_fechamento` (3º Job, Asset Bundles) — consolida `gold_fechamento_mensal`, validando completude via `pipeline_runs` antes de aceitar o fechamento. Descoberta e corrigida uma lacuna real (backfill nunca registrava em `pipeline_runs`, ADR-016/Lição 15). Testado nos dois cenários (mês completo/incompleto) e via Job real (`bundle run`).
