@@ -1,13 +1,13 @@
 resources:
   jobs:
-    job_diario:
-      name: "Pulse - Job Diario"
-      description: |
-        Pipeline diario da Pulse Health Platform: gera dados sinteticos dos 4 sistemas (ERP, CRM, TMS, Financeiro), ingere via Autoloader (Landing -> Bronze), promove seeds e constroi as tabelas Gold/observability. 4 Tasks dependentes, ordem CRM -> ERP -> TMS -> Financeiro (ADR-011). Agendado para 06:00 (America/Sao_Paulo).
-      tags:
-        ambiente: "poc"
-        projeto: "pulse-health-observability"
-        dominio: "life-sciences"
+    Pulse_Job_Diario:
+      name: Pulse - Job Diario
+      description: >
+        Pipeline diario da Pulse Health Platform: gera dados sinteticos dos 4
+        sistemas (ERP, CRM, TMS, Financeiro), ingere via Autoloader (Landing ->
+        Bronze), promove seeds e constroi as tabelas Gold/observability. 4 Tasks
+        dependentes, ordem CRM -> ERP -> TMS -> Financeiro (ADR-011). Agendado
+        para 06:00 (America/Sao_Paulo).
       email_notifications:
         on_failure:
           - bruno.quelestech@outlook.com
@@ -20,31 +20,41 @@ resources:
           - metric: RUN_DURATION_SECONDS
             op: GREATER_THAN
             value: 900
+      schedule:
+        quartz_cron_expression: 0 0 6 * * ?
+        timezone_id: America/Sao_Paulo
+        pause_status: PAUSED
       tasks:
-        - task_key: gerar_dados
-          notebook_task:
-            notebook_path: ../src/orquestracao/gerar_dados.ipynb
-            base_parameters:
-              sistema: "todos"
-              modo_execucao: "agendado"
-        - task_key: ingerir_dados
-          depends_on:
-            - task_key: gerar_dados
-          notebook_task:
-            notebook_path: ../src/orquestracao/ingerir_dados.ipynb
-            base_parameters:
-              sistema: "todos"
-        - task_key: promover_seeds
-          depends_on:
-            - task_key: ingerir_dados
-          notebook_task:
-            notebook_path: ../src/orquestracao/promover_seeds.ipynb
         - task_key: construir_gold
           depends_on:
             - task_key: promover_seeds
           notebook_task:
-            notebook_path: ../src/orquestracao/construir_gold.ipynb
-      schedule:
-        quartz_cron_expression: "0 0 6 * * ?"
-        timezone_id: "America/Sao_Paulo"
-        pause_status: UNPAUSED
+            notebook_path: /Workspace/Users/bruno.quelestech@outlook.com/.bundle/poc-pulse-health-observability/dev/files/src/orquestracao/construir_gold
+            source: WORKSPACE
+        - task_key: gerar_dados
+          notebook_task:
+            notebook_path: /Workspace/Users/bruno.quelestech@outlook.com/.bundle/poc-pulse-health-observability/dev/files/src/orquestracao/gerar_dados
+            base_parameters:
+              modo_execucao: agendado
+              sistema: todos
+            source: WORKSPACE
+        - task_key: ingerir_dados
+          depends_on:
+            - task_key: gerar_dados
+          notebook_task:
+            notebook_path: /Workspace/Users/bruno.quelestech@outlook.com/.bundle/poc-pulse-health-observability/dev/files/src/orquestracao/ingerir_dados
+            base_parameters:
+              sistema: todos
+            source: WORKSPACE
+        - task_key: promover_seeds
+          depends_on:
+            - task_key: ingerir_dados
+          notebook_task:
+            notebook_path: /Workspace/Users/bruno.quelestech@outlook.com/.bundle/poc-pulse-health-observability/dev/files/src/orquestracao/promover_seeds
+            source: WORKSPACE
+      tags:
+        ambiente: poc
+        dominio: life-sciences
+        projeto: pulse-health-observability
+      queue:
+        enabled: true
