@@ -250,3 +250,31 @@ Resultado: `'poc_pulse_observability\xa0'` — um caractere de espaço não sepa
 **Correção definitiva:** calcular os dois formatos possíveis de caminho e adicionar ambos ao `sys.path`, em vez de assumir qual formato o contexto vai usar.
 
 **Lição para o futuro:** um comando que "funciona" em teste manual não prova que funciona em todo contexto de execução — **execução interativa e execução via Job são ambientes diferentes**, mesmo rodando o mesmo notebook, com o mesmo código. Qualquer coisa que dependa do contexto de execução (caminho do notebook, variáveis de ambiente, credenciais implícitas) precisa ser testada nos dois contextos antes de ser considerada corrigida — validação em 3 camadas (manual → Job isolado → Job completo) é o que realmente confirma uma correção, não apenas a primeira camada que passar.
+
+---
+
+## Lição 19 — Uma decisão aceita e testada (ADR) não é o mesmo que uma decisão implantada em produção
+
+**O que aconteceu:** ao investigar um gap real no painel de alertas (nenhum registro em `observability.alertas` desde 24/08), a causa raiz levou a uma tabela Silver (`tms_remessas`) que tinha parado de crescer em 21/08 — sem nenhum status de falha em `pipeline_runs`, já que `construir_gold` continuava retornando `sucesso` todo dia, só que sobre uma Silver estática.
+
+**Causa raiz:** a função `transformar_bronze_para_silver` (ADR-013), com config e lógica corretas desde sempre, nunca teve uma Task correspondente no `job_diario.yml`. Ela só era chamada em notebooks de spike e nos dois backfills manuais (`backfill_5_pipelines.ipynb`, `backfill_completo.ipynb`) — nunca como parte do Asset Bundle de produção. A Silver foi populada pelo último backfill manual (finalizado em 21/08) e nunca mais alimentada depois disso.
+
+**Por que isso não gerou nenhum alerta nem falha visível:** as 11 tabelas de evento (Bronze) continuavam sendo ingeridas normalmente todo dia; `construir_gold` lia sempre a mesma Silver estática e recalculava com sucesso todo dia (`CREATE OR REPLACE TABLE AS SELECT`) — sem erro, porque não havia nada "errado" na query em si, só dado obsoleto sendo servido como se fosse atual. O sintoma só apareceu de forma indireta, semanas depois, num eixo completamente diferente (ausência de novos alertas de cadeia fria).
+
+**Correção:** criado o orquestrador `transformar_silver.ipynb`, no mesmo padrão dos outros 6, testado isolado com 1 tabela antes de generalizar pras 11, e adicionado como Task no `job_diario`, em paralelo com `promover_seeds` (ambas dependem só de `ingerir_dados`), com `construir_gold` passando a depender das duas.
+
+**Lição para o futuro:** um ADR aceito com código testado (spike validado) não é prova de que a decisão foi implantada — só prova que ela **funciona**, não que ela **roda** em produção. A checagem que teria pego isso mais cedo: para cada notebook em `orquestracao/`, existe uma Task correspondente em algum `resources/*.yml`? E o inverso: para cada função `transformar_*`/`construir_*` testada e aceita, existe um orquestrador de produção chamando ela, não só um notebook de spike? Essa dupla checagem devia fazer parte do checklist de "pronto pra produção", não só "os testes passaram".
+
+---
+
+## Lição 20 — `restartPython()` precisa de célula própria; e a UI do notebook não é fonte confiável pra confirmar isso
+
+**O que aconteceu:** ao reaplicar a correção da Lição 18 (detecção dinâmica de `sys.path`) no orquestrador novo `transformar_silver`, a Task continuou falhando com `ModuleNotFoundError` mesmo com código idêntico ao que já funcionava nos outros 6 orquestradores — e funcionando normalmente em teste manual/interativo.
+
+**Causa raiz:** `dbutils.library.restartPython()` estava na mesma célula que o `sys.path.append` seguinte. Em execução manual, isso "funcionava" por acaso; via Task de Job, o restart interrompe o processo antes do restante da célula ser efetivado no novo interpretador — o próprio aviso do Databricks (`statements after restartPython() will execute before Python is restarted`) descreve exatamente esse comportamento, mas passou despercebido nas primeiras tentativas.
+
+**Como foi descoberto:** duas tentativas de "separar as células" pela UI pareceram ter funcionado (o teste manual passava normalmente), mas o arquivo salvo continuava com tudo numa célula só. Só a inspeção do JSON bruto do `.ipynb` confirmou a separação real.
+
+**Correção:** `dbutils.library.restartPython()` isolado numa célula própria, sem nenhum código depois dela; o restante do código de path numa célula separada, seguinte.
+
+**Lição para o futuro:** dois níveis. Específico: `restartPython()` sempre em célula própria — detalhe que a Lição 18 não cobria (documentava o `sys.path`, não a estrutura de célula). Geral: quando a estrutura de células de um notebook afeta o comportamento, a aparência da UI não é fonte confiável de verificação — o JSON bruto do `.ipynb` é.

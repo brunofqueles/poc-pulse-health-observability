@@ -52,3 +52,9 @@ O Job Mensal usa `pipeline_runs` como pré-condição de execução — a plataf
 ## Adendo — Job Mensal implementado
 
 Implementado como `job_mensal_fechamento` (Job próprio, não Task dentro de outro Job), com a validação de completude via `pipeline_runs` funcionando exatamente como previsto aqui. Detalhes de implementação (descoberta de lacuna em `pipeline_runs`, cálculo automático de "mês anterior", alerta condicional): `docs/adr/adr-016-fechamento-mensal.md`.
+
+## Adendo — DAG real do Job Diário atualizado (5 Tasks, incluindo `transformar_silver`)
+
+O diagrama original desta decisão (Ingestão → Transformação → Gold, por pipeline individual) documentava a intenção na época, mas o `job_diario` implementado sempre teve uma topologia mais simples, organizada por etapa unificada entre sistemas, não por pipeline: `gerar_dados → ingerir_dados → {promover_seeds, transformar_silver} → construir_gold`. Essa topologia real nunca tinha sido registrada aqui.
+
+`transformar_silver` (transformação Bronze→Silver das 11 tabelas de evento, ADR-013) foi adicionada como Task em paralelo com `promover_seeds` (promoção dos 6 seeds) — ambas dependem só de `ingerir_dados`, e `construir_gold` passa a depender das duas, já que ele lê tanto fatos quanto dimensões. A Task só foi criada em setembro/2026, meses depois da migração para produção — o motivo dessa lacuna e como ela foi descoberta e corrigida: `docs/licoes-aprendidas.md`, Lição 19.
