@@ -47,3 +47,11 @@ Gravação: escrita simples na primeira execução (Silver ainda não existe); `
 - Adicionar limpeza a uma tabela nova é editar a configuração, não escrever código novo — mesmo ganho de manutenção já obtido com `IngestorAutoloader`.
 - A configuração é, na prática, a tradução em código da coluna "Tipo lógico Silver" de `docs/schemas/*.md` — os dois precisam ser mantidos sincronizados manualmente (não há geração automática de um a partir do outro nesta fase).
 - Validado em escala completa: as 11 tabelas passam por primeira carga e depois `MERGE`, com totais idênticos nas duas execuções — idempotência confirmada, não só suposta.
+
+## Adendo — Task de produção implementada (lacuna de ~4 semanas corrigida)
+
+A função e a configuração descritas acima estavam corretas desde a aceitação deste ADR — nunca precisaram de revisão. O que faltou foi a Task de Workflow que chama `transformar_bronze_para_silver` em produção: ela só era executada em notebooks de spike e nos dois backfills manuais (`backfill_5_pipelines.ipynb`, `backfill_completo.ipynb`), nunca como parte do `job_diario` via Asset Bundle. A Silver ficou órfã por ~4 semanas (21/08 a 17/09/2026) sem nenhum erro visível, porque as Tasks downstream (`construir_gold`) continuavam retornando `sucesso` sobre uma Silver estática.
+
+Corrigido com a criação do orquestrador `orquestracao/transformar_silver.ipynb` (7º orquestrador do projeto), no mesmo padrão dos demais: itera as 11 entradas de `CONFIGURACAO_TABELAS`, chama `transformar_bronze_para_silver` para cada uma, registra cada execução em `pipeline_runs`. Testado isolado com 1 tabela (`tms_remessas`) antes de generalizar para as 11. Adicionado como Task no `job_diario`, em paralelo com `promover_seeds` (ambas dependem só de `ingerir_dados`), com `construir_gold` passando a depender das duas.
+
+Causa raiz completa, incluindo por que o gap não gerou nenhum alerta, e o detalhe adicional sobre `dbutils.library.restartPython()` precisar de célula própria: `docs/licoes-aprendidas.md`, Lições 19 e 20.
